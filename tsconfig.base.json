@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmitOnError": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@stflightsim/shared": ["./packages/shared/src/index.ts"],
+      "@stflightsim/aircraft": ["./packages/aircraft/src/index.ts"],
+      "@stflightsim/scenery": ["./packages/scenery/src/index.ts"],
+      "@stflightsim/input": ["./packages/input/src/index.ts"],
+      "@stflightsim/renderer": ["./packages/renderer/src/index.ts"],
+      "@stflightsim/simulation": ["./packages/simulation/src/index.ts"],
+      "@stflightsim/jsbsim-wasm": ["./packages/jsbsim-wasm/src/index.ts"],
+      "@stflightsim/instruments": ["./packages/instruments/src/index.ts"]
+    }
+  }
+}

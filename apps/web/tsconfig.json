@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist-ts",
+    "rootDir": ".",
+    "types": ["vite/client"]
+  },
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/input" },
+    { "path": "../../packages/renderer" },
+    { "path": "../../packages/simulation" },
+    { "path": "../../packages/instruments" }
+  ],
+  "include": ["src", "vite.config.ts"]
+}

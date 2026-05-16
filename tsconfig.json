@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/aircraft" },
+    { "path": "./packages/scenery" },
+    { "path": "./packages/input" },
+    { "path": "./packages/renderer" },
+    { "path": "./packages/simulation" },
+    { "path": "./packages/jsbsim-wasm" },
+    { "path": "./packages/instruments" },
+    { "path": "./apps/web" }
+  ]
+}

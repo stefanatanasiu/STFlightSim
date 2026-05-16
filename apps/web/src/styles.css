@@ -1,0 +1,715 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b1210;
+  color: #f4f0df;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button,
+meter,
+select {
+  font: inherit;
+}
+
+.simulator-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 320px;
+  overflow: hidden;
+  background: #0b1210;
+}
+
+.scene-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.top-bar,
+.bottom-strip,
+.panel,
+.warning-banner {
+  backdrop-filter: blur(14px);
+  background: rgba(13, 20, 18, 0.76);
+  border: 1px solid rgba(244, 240, 223, 0.13);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
+
+.top-bar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  min-height: 46px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(144px, 1fr) auto minmax(144px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+.brand-lockup,
+.panel-title,
+.toolbar,
+.status-strip {
+  display: flex;
+  align-items: center;
+}
+
+.brand-lockup {
+  gap: 8px;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.status-strip {
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.status-strip span {
+  min-width: 70px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(244, 240, 223, 0.08);
+  color: #d9e4db;
+  text-align: center;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.status-pill {
+  text-transform: uppercase;
+}
+
+.status-running {
+  color: #bff2c1 !important;
+}
+
+.status-paused,
+.status-starting {
+  color: #ffd989 !important;
+}
+
+.toolbar {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.scenario-picker {
+  height: 34px;
+  min-width: 142px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(244, 240, 223, 0.15);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #f4f0df;
+  background: rgba(244, 240, 223, 0.08);
+}
+
+.scenario-picker select {
+  width: 104px;
+  min-width: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  outline: 0;
+  cursor: pointer;
+}
+
+.scenario-picker option {
+  color: #101716;
+}
+
+.scenario-picker:focus-within {
+  outline: 2px solid rgba(54, 184, 145, 0.55);
+  outline-offset: 1px;
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(244, 240, 223, 0.15);
+  border-radius: 8px;
+  color: #f4f0df;
+  background: rgba(244, 240, 223, 0.08);
+  cursor: pointer;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  background: rgba(54, 184, 145, 0.22);
+  outline: 2px solid rgba(54, 184, 145, 0.55);
+  outline-offset: 1px;
+}
+
+.view-button.active {
+  border-color: rgba(116, 224, 185, 0.7);
+  background: rgba(54, 184, 145, 0.32);
+  color: #c9ffe8;
+}
+
+.hud-overlay,
+.cockpit-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud-overlay {
+  color: rgba(159, 255, 196, 0.92);
+  text-shadow: 0 0 10px rgba(47, 255, 146, 0.45);
+}
+
+.hud-reticle,
+.hud-flightpath {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -50%);
+}
+
+.hud-reticle::before,
+.hud-reticle::after,
+.hud-reticle span::before,
+.hud-reticle span::after {
+  position: absolute;
+  content: "";
+  background: rgba(159, 255, 196, 0.86);
+}
+
+.hud-reticle::before,
+.hud-reticle::after {
+  top: 47px;
+  width: 34px;
+  height: 2px;
+}
+
+.hud-reticle::before {
+  left: 0;
+}
+
+.hud-reticle::after {
+  right: 0;
+}
+
+.hud-reticle span::before,
+.hud-reticle span::after {
+  left: 47px;
+  width: 2px;
+  height: 25px;
+}
+
+.hud-reticle span::before {
+  top: 0;
+}
+
+.hud-reticle span::after {
+  bottom: 0;
+}
+
+.hud-flightpath {
+  width: 42px;
+  height: 42px;
+  border: 2px solid rgba(159, 255, 196, 0.88);
+  border-radius: 50%;
+}
+
+.hud-flightpath::before,
+.hud-flightpath::after {
+  position: absolute;
+  top: 19px;
+  width: 28px;
+  height: 2px;
+  content: "";
+  background: rgba(159, 255, 196, 0.88);
+}
+
+.hud-flightpath::before {
+  left: -31px;
+}
+
+.hud-flightpath::after {
+  right: -31px;
+}
+
+.hud-tape,
+.hud-heading {
+  position: absolute;
+  min-width: 82px;
+  border: 1px solid rgba(159, 255, 196, 0.44);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: rgba(3, 22, 12, 0.22);
+  text-align: center;
+}
+
+.hud-tape small {
+  display: block;
+  font-size: 0.62rem;
+  color: rgba(187, 255, 213, 0.74);
+}
+
+.hud-tape strong {
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.hud-speed {
+  left: max(24%, 240px);
+  top: 43%;
+}
+
+.hud-altitude {
+  right: max(24%, 240px);
+  top: 43%;
+}
+
+.hud-heading {
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%);
+  font-weight: 780;
+}
+
+.cockpit-overlay::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: radial-gradient(circle at 50% 38%, transparent 0 46%, rgba(8, 10, 10, 0.22) 70%, rgba(4, 5, 5, 0.64) 100%);
+}
+
+.windshield-frame {
+  position: absolute;
+  bottom: 220px;
+  width: 16px;
+  height: 52vh;
+  transform-origin: bottom center;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #1b1d1c, #3a3d39, #161817);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.windshield-left {
+  left: 31%;
+  transform: rotate(-12deg);
+}
+
+.windshield-right {
+  right: 31%;
+  transform: rotate(12deg);
+}
+
+.windshield-center {
+  left: 50%;
+  width: 12px;
+  transform: translateX(-50%);
+}
+
+.glare-shield {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 142px;
+  height: 115px;
+  border-radius: 42% 42% 0 0;
+  background: linear-gradient(#252625, #111312 72%);
+  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.38);
+}
+
+.cockpit-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  width: min(720px, 72vw);
+  min-height: 138px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(74px, 1fr));
+  gap: 12px;
+  padding: 18px 22px 20px;
+  border: 1px solid rgba(244, 240, 223, 0.12);
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(#242827, #111414);
+  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.45);
+}
+
+.mini-dial {
+  aspect-ratio: 1;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border: 5px solid #0a0c0b;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #242928 0 42%, #0d0f0e 43% 100%);
+  color: #edf0e8;
+  box-shadow: inset 0 0 0 1px rgba(244, 240, 223, 0.12), 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.mini-dial span {
+  font-size: 0.62rem;
+  color: #9ead9f;
+}
+
+.mini-dial strong {
+  max-width: 86%;
+  overflow: hidden;
+  font-size: clamp(0.82rem, 1.3vw, 1.18rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-stack,
+.right-stack {
+  position: absolute;
+  top: 78px;
+  display: grid;
+  gap: 10px;
+}
+
+.left-stack {
+  left: 14px;
+  width: min(420px, calc(100vw - 28px));
+}
+
+.right-stack {
+  right: 14px;
+  width: min(320px, calc(100vw - 28px));
+}
+
+.panel {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.panel-title {
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #f4f0df;
+  font-size: 0.8rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.six-pack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gauge-tile,
+.attitude-tile {
+  min-height: 92px;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 240, 223, 0.12);
+  background: rgba(4, 8, 8, 0.66);
+  overflow: hidden;
+}
+
+.gauge-tile {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  padding: 10px;
+}
+
+.gauge-tile span,
+.gauge-tile small,
+.attitude-tile span {
+  font-size: 0.68rem;
+  color: #aab9ad;
+  text-transform: uppercase;
+}
+
+.gauge-tile strong {
+  align-self: center;
+  color: #f4f0df;
+  font-size: 1.6rem;
+  font-weight: 790;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.accent-green strong {
+  color: #baf0af;
+}
+
+.accent-amber strong {
+  color: #ffd37d;
+}
+
+.accent-teal strong {
+  color: #8ee4d4;
+}
+
+.accent-red strong {
+  color: #ff9b8f;
+}
+
+.attitude-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.attitude-mask {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(244, 240, 223, 0.22);
+  background: #152120;
+}
+
+.horizon {
+  position: absolute;
+  inset: -50%;
+  transition: transform 80ms linear;
+}
+
+.sky-band,
+.ground-band {
+  height: 50%;
+}
+
+.sky-band {
+  background: #4b8fbd;
+}
+
+.ground-band {
+  background: #8a6841;
+}
+
+.aircraft-reference {
+  position: absolute;
+  left: 17px;
+  right: 17px;
+  top: 36px;
+  height: 2px;
+  background: #ffe6a8;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.attitude-tile span {
+  position: absolute;
+  bottom: 7px;
+}
+
+.engine-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.linear-gauge {
+  display: grid;
+  gap: 5px;
+}
+
+.linear-gauge-label,
+.system-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #d7ddcf;
+  font-size: 0.8rem;
+}
+
+.linear-gauge-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(244, 240, 223, 0.11);
+}
+
+.linear-gauge-track div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #45c4a0, #f5c96b, #ef7468);
+}
+
+.systems-panel {
+  display: grid;
+  gap: 9px;
+}
+
+.system-row meter {
+  width: 130px;
+}
+
+.settings-panel {
+  position: absolute;
+  top: 78px;
+  right: 348px;
+  width: 220px;
+}
+
+.settings-panel dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 12px;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.settings-panel dt {
+  color: #aab9ad;
+}
+
+.settings-panel dd {
+  margin: 0;
+  text-align: right;
+  color: #f4f0df;
+}
+
+.warning-banner {
+  position: absolute;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  border-radius: 8px;
+  padding: 9px 16px;
+  color: #220b08;
+  background: rgba(255, 154, 120, 0.9);
+  text-align: center;
+  font-weight: 840;
+  letter-spacing: 0;
+}
+
+.bottom-strip {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  min-height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  color: #bcc8b7;
+  font-size: 0.72rem;
+}
+
+.bottom-strip > div {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenery-status {
+  flex: 1 1 320px;
+  text-align: center;
+}
+
+.scenery-online {
+  color: #bff2c1;
+}
+
+.scenery-loading {
+  color: #ffd989;
+}
+
+.scenery-error {
+  color: #ffb49d;
+}
+
+@media (max-width: 900px) {
+  .top-bar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .status-strip {
+    display: none;
+  }
+
+  .left-stack,
+  .right-stack,
+  .settings-panel {
+    width: calc(100vw - 28px);
+    left: 14px;
+    right: auto;
+  }
+
+  .right-stack {
+    top: auto;
+    bottom: 54px;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .settings-panel {
+    top: 78px;
+  }
+
+  .bottom-strip {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .brand-lockup span {
+    display: none;
+  }
+
+  .scenario-picker {
+    min-width: 112px;
+  }
+
+  .scenario-picker select {
+    width: 76px;
+  }
+
+  .left-stack {
+    top: 68px;
+  }
+
+  .right-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .six-pack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gauge-tile,
+  .attitude-tile {
+    min-height: 76px;
+  }
+
+  .gauge-tile strong {
+    font-size: 1.25rem;
+  }
+}

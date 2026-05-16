@@ -1,0 +1,9 @@
+{
+  "name": "STFlightSim",
+  "short_name": "STFlightSim",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#0b1210",
+  "theme_color": "#0b1210",
+  "icons": []
+}
