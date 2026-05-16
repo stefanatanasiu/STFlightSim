@@ -20,7 +20,7 @@ export default defineConfig({
     include: ["three", "react", "react-dom", "lucide-react"]
   },
   build: {
-    chunkSizeWarningLimit: 650,
+    chunkSizeWarningLimit: 2600,
     rollupOptions: {
       output: {
         manualChunks: {

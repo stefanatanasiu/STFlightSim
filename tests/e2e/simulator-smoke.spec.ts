@@ -53,6 +53,14 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await expect(page.getByText("STFlightSim")).toBeVisible();
   await expect(page.getByText("Primary")).toBeVisible();
   await expect(page.getByRole("button", { name: "Pilot view" })).toHaveClass(/active/);
+  await expect(page.getByRole("button", { name: "Flight overlay" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".hud-overlay")).toBeVisible();
+
+  await page.keyboard.press("KeyH");
+  await expect(page.getByRole("button", { name: "Flight overlay" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".hud-overlay")).toHaveCount(0);
+  await page.keyboard.press("KeyH");
+  await expect(page.getByRole("button", { name: "Flight overlay" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".hud-overlay")).toBeVisible();
 
   const canvas = page.locator("canvas.scene-canvas");
@@ -71,6 +79,10 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
 
   await page.getByRole("button", { name: "Cockpit view" }).click();
   await expect(page.getByRole("button", { name: "Cockpit view" })).toHaveClass(/active/);
+  await expect(page.locator(".cockpit-overlay")).toBeVisible();
+  await page.getByRole("button", { name: "Flight overlay" }).click();
+  await expect(page.locator(".cockpit-overlay")).toHaveCount(0);
+  await page.getByRole("button", { name: "Flight overlay" }).click();
   await expect(page.locator(".cockpit-overlay")).toBeVisible();
   await page.screenshot({ path: "test-results/stflightsim-cockpit-e2e.png", fullPage: true });
 

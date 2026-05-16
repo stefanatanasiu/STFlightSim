@@ -61,7 +61,7 @@ select {
   min-height: 46px;
   border-radius: 8px;
   display: grid;
-  grid-template-columns: minmax(144px, 1fr) auto minmax(144px, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
@@ -77,6 +77,7 @@ select {
 
 .brand-lockup {
   gap: 8px;
+  min-width: 132px;
   font-weight: 760;
   letter-spacing: 0;
 }
@@ -85,6 +86,7 @@ select {
   justify-content: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .status-strip span {
@@ -112,13 +114,16 @@ select {
 }
 
 .toolbar {
+  min-width: max-content;
   justify-content: flex-end;
+  flex: 0 0 auto;
   gap: 8px;
 }
 
 .scenario-picker {
   height: 34px;
   min-width: 142px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -640,17 +645,22 @@ select {
   color: #bff2c1;
 }
 
+.scenery-ready {
+  color: #bff2c1;
+}
+
 .scenery-loading {
   color: #ffd989;
 }
 
-.scenery-error {
+.scenery-error,
+.scenery-disabled {
   color: #ffb49d;
 }
 
 @media (max-width: 900px) {
   .top-bar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr;
   }
 
   .status-strip {
@@ -676,6 +686,12 @@ select {
   }
 
   .bottom-strip {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .status-strip {
     display: none;
   }
 }

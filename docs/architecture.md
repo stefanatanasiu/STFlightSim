@@ -35,6 +35,5 @@ The first implementation deliberately proves the full browser loop before import
 
 1. Compile JSBSim with Emscripten and expose a narrow aircraft-control/telemetry API.
 2. Add C172 JSBSim XML assets and validation fixtures.
-3. Add CesiumJS as an online scenery provider with explicit attribution and token configuration.
-4. Generate airport detail from OurAirports and open scenery data.
-5. Add live weather, navaids, aircraft packages, and Electron packaging.
+3. Generate airport detail from OurAirports and open scenery data.
+4. Add live weather, navaids, aircraft packages, and Electron packaging.

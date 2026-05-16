@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings } from "lucide-react";
+import { Camera, Eye, EyeOff, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings } from "lucide-react";
 import { InputManager } from "@stflightsim/input";
 import { formatGaugeValue, getPrimaryWarning } from "@stflightsim/instruments";
 import { FlightScene, type SceneryLoadStatus } from "@stflightsim/renderer";
@@ -20,6 +20,7 @@ export function App() {
   const [activeGamepad, setActiveGamepad] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<CameraViewMode>("pilot");
+  const [flightOverlayVisible, setFlightOverlayVisible] = useState(true);
   const [regionId, setRegionId] = useState<SceneryRegionId>(DEFAULT_SCENERY_REGION.id);
   const [osmDetail, setOsmDetail] = useState<OnlineSceneryDetail>("standard");
   const [sceneryStatus, setSceneryStatus] = useState<SceneryLoadStatus>({ regionId: DEFAULT_SCENERY_REGION.id, mode: "loading", detail: "standard", message: "Preparing scenery" });
@@ -51,6 +52,20 @@ export function App() {
   useEffect(() => {
     sceneRef.current?.setOsmDetail(osmDetail);
   }, [osmDetail]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.code !== "KeyH" || isEditableElement(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      setFlightOverlayVisible((visible) => !visible);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     sceneRef.current?.setRegion(activeRegion);
@@ -135,6 +150,7 @@ export function App() {
 
   const viewLabel = viewMode === "pilot" ? "Pilot" : viewMode === "cockpit" ? "Cockpit" : "Chase";
   const osmDetailLabel = osmDetail === "high" ? "OSM high" : "OSM standard";
+  const scenerySourceLabel = sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready";
 
   return (
     <main className="simulator-shell">
@@ -149,6 +165,7 @@ export function App() {
           <span>{activeGamepad ? "Gamepad" : "Keyboard"}</span>
           <span>{viewLabel}</span>
           <span>{activeRegion.shortName}</span>
+          <span>Three.js</span>
           <span>{osmDetailLabel}</span>
           <span>{telemetry?.onGround ? "Ground" : "Airborne"}</span>
         </div>
@@ -165,6 +182,9 @@ export function App() {
           </label>
           <button type="button" className={`icon-button detail-button ${osmDetail === "high" ? "active" : ""}`} onClick={() => setOsmDetail((detail) => detail === "high" ? "standard" : "high")} title="High-resolution OpenStreetMap" aria-label="High-resolution OpenStreetMap" aria-pressed={osmDetail === "high"}>
             <Layers size={17} />
+          </button>
+          <button type="button" className={`icon-button detail-button ${flightOverlayVisible ? "active" : ""}`} onClick={() => setFlightOverlayVisible((visible) => !visible)} title="Flight overlay (H)" aria-label="Flight overlay" aria-pressed={flightOverlayVisible}>
+            {flightOverlayVisible ? <Eye size={17} /> : <EyeOff size={17} />}
           </button>
           <ViewButton mode="pilot" active={viewMode === "pilot"} onSelect={setViewMode} label="Pilot view" />
           <ViewButton mode="cockpit" active={viewMode === "cockpit"} onSelect={setViewMode} label="Cockpit view" />
@@ -183,8 +203,8 @@ export function App() {
 
       {warning && <div className="warning-banner">{warning}</div>}
 
-  {viewMode === "pilot" && <HudOverlay telemetry={telemetry} />}
-  {viewMode === "cockpit" && <CockpitOverlay telemetry={telemetry} />}
+      {flightOverlayVisible && viewMode === "pilot" && <HudOverlay telemetry={telemetry} />}
+      {flightOverlayVisible && viewMode === "cockpit" && <CockpitOverlay telemetry={telemetry} />}
 
       <section className="left-stack" aria-label="Primary instruments">
         <InstrumentPanel telemetry={telemetry} />
@@ -201,10 +221,18 @@ export function App() {
         <div>{activeRegion.airportName}</div>
         <div className={`scenery-status scenery-${sceneryStatus.mode}`}>{sceneryStatus.message}</div>
         <div>JSBSim/WASM adapter staged</div>
-        <div>{sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready"}</div>
+        <div>{scenerySourceLabel}</div>
       </footer>
     </main>
   );
+}
+
+function isEditableElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
 }
 
 function ViewButton({ mode, active, onSelect, label }: { mode: CameraViewMode; active: boolean; onSelect: (mode: CameraViewMode) => void; label: string }) {

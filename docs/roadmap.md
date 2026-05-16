@@ -18,8 +18,6 @@
 
 ## Milestone 3: Real Scenery
 
-- CesiumJS provider
-- token/attribution UI
 - OurAirports runway import
 - generated airport detail
 - quality presets and tile budgets

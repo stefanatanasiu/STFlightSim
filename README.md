@@ -2,7 +2,7 @@
 
 STFlightSim is a web-first flight simulator prototype. The current implementation starts with a runnable browser vertical slice: selectable airport scenery, optional live OpenStreetMap vector overlays, keyboard/gamepad controls, three camera modes, cockpit/HUD overlays, and a simulation worker that advances a Cessna 172-inspired flight model off the UI thread.
 
-The long-term architecture is designed for JSBSim compiled to WebAssembly for realistic flight dynamics, CesiumJS/3D Tiles for streamed world scenery, and an Electron wrapper for Windows, macOS, and Linux once the web app stabilizes.
+The long-term architecture is designed for JSBSim compiled to WebAssembly for realistic flight dynamics and an Electron wrapper for Windows, macOS, and Linux once the web app stabilizes.
 
 ## Quick Start
 
@@ -39,6 +39,7 @@ Online scenery uses OpenStreetMap contributor data through the public Overpass A
 - `2`: cockpit frame and instrument-panel view
 - `3`: rear chase view with the full aircraft visible
 - `V`: cycle camera view
+- `H`: show/hide the HUD or cockpit frame overlay
 
 Gamepads are polled through the browser Gamepad API. Left stick controls pitch/roll, right stick controls rudder/throttle bias, and triggers can be used for brakes/throttle depending on device mapping.
 
@@ -48,7 +49,7 @@ Gamepads are polled through the browser Gamepad API. Left stick controls pitch/r
 - `packages/simulation`: fixed-step worker loop and the current TypeScript flight model.
 - `packages/shared`: telemetry, controls, units, and coordinate helpers.
 - `packages/input`: keyboard and gamepad input normalization.
-- `packages/renderer`: Three.js region renderer with procedural scenery and optional OpenStreetMap vector overlays.
+- `packages/renderer`: Three.js region renderer with procedural/OSM overlays.
 - `packages/jsbsim-wasm`: boundary for the planned JSBSim/Emscripten runtime.
 
 ## Reference Direction
