@@ -15,14 +15,14 @@ Open the URL printed by Vite. The simulator starts directly in the clean forward
 
 ## Scenery Presets
 
-Use the map selector in the top toolbar to switch scenery. Changing region resets the aircraft at that airport's runway.
+Use the map selector in the top toolbar to switch scenery. Changing region resets the aircraft at that airport's runway. Use the stacked-layers button to toggle high-resolution OpenStreetMap detail for online-capable scenery.
 
 - `Heathrow`: city-airport scene with dense terminals, suburbs, motorways, reservoirs, and live OpenStreetMap roads/buildings/water when the Overpass API is reachable.
 - `Innsbruck`: mountain-valley airport with steep ridges, forested slopes, villages, cable cars, and live OSM vectors when online.
 - `St Maarten`: coastal island airport with beach approach, marina, resorts, palms, turquoise water, and live OSM coastline/detail when online.
 - `Seattle`: offline procedural fallback training field.
 
-Online scenery uses OpenStreetMap contributor data through the public Overpass API. If the request is blocked, rate-limited, or offline, the renderer keeps the procedural scenery active.
+Online scenery uses OpenStreetMap contributor data through the public Overpass API. Standard mode requests the core airport-area roads, buildings, water, and green spaces. High-resolution mode requests a larger radius, a higher feature budget, additional minor roads/paths/rail/aeroway features, and renders closed OSM footprints as actual flat or extruded vector shapes where possible. If the request is blocked, rate-limited, or offline, the renderer keeps the procedural scenery active.
 
 ## Current Controls
 

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { DEFAULT_SCENERY_REGION, loadOpenStreetMapScenery, type OnlineSceneryData, type OnlineSceneryFeature, type SceneryRegion } from "@stflightsim/scenery";
+import { DEFAULT_SCENERY_REGION, loadOpenStreetMapScenery, type OnlineSceneryData, type OnlineSceneryDetail, type OnlineSceneryFeature, type SceneryRegion } from "@stflightsim/scenery";
 import { degToRad, feetToMeters, localMetersBetween, type AircraftTelemetry, type CameraViewMode } from "@stflightsim/shared";
 
 export type SceneryLoadMode = "offline" | "loading" | "online" | "error";
@@ -7,14 +7,17 @@ export type SceneryLoadMode = "offline" | "loading" | "online" | "error";
 export interface SceneryLoadStatus {
   regionId: string;
   mode: SceneryLoadMode;
+  detail?: OnlineSceneryDetail;
   message: string;
   featureCount?: number;
+  radiusMeters?: number;
   attribution?: string;
 }
 
 export interface FlightSceneOptions {
   region?: SceneryRegion;
   onlineScenery?: boolean;
+  osmDetail?: OnlineSceneryDetail;
   onSceneryStatus?: (status: SceneryLoadStatus) => void;
 }
 
@@ -28,6 +31,8 @@ export class FlightScene {
   private readonly clock = new THREE.Clock();
   private readonly onSceneryStatus?: (status: SceneryLoadStatus) => void;
   private readonly onlineScenery: boolean;
+  private osmDetail: OnlineSceneryDetail;
+  private onlineSceneryGroup: THREE.Group | null = null;
   private sceneryAbortController: AbortController | null = null;
   private animationFrame = 0;
   private lastTelemetry: AircraftTelemetry | null = null;
@@ -38,6 +43,7 @@ export class FlightScene {
   constructor(private readonly canvas: HTMLCanvasElement, options: FlightSceneOptions = {}) {
     this.region = options.region ?? DEFAULT_SCENERY_REGION;
     this.onlineScenery = options.onlineScenery ?? true;
+    this.osmDetail = options.osmDetail ?? "standard";
     this.onSceneryStatus = options.onSceneryStatus;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -74,6 +80,15 @@ export class FlightScene {
     this.camera.position.set(0, 4, 0);
     this.previousViewMode = this.viewMode;
     this.buildScenery();
+  }
+
+  setOsmDetail(detail: OnlineSceneryDetail): void {
+    if (this.osmDetail === detail) {
+      return;
+    }
+
+    this.osmDetail = detail;
+    this.loadOnlineLayer();
   }
 
   dispose(): void {
@@ -124,6 +139,8 @@ export class FlightScene {
       this.worldRoot.remove(child);
       this.disposeObject(child);
     }
+
+    this.onlineSceneryGroup = null;
   }
 
   private buildTerrain(): void {
@@ -625,32 +642,49 @@ export class FlightScene {
     }
   }
 
+  private clearOnlineLayer(): void {
+    this.sceneryAbortController?.abort();
+    this.sceneryAbortController = null;
+
+    if (!this.onlineSceneryGroup) {
+      return;
+    }
+
+    this.worldRoot.remove(this.onlineSceneryGroup);
+    this.disposeObject(this.onlineSceneryGroup);
+    this.onlineSceneryGroup = null;
+  }
+
   private async loadOnlineLayer(): Promise<void> {
+    this.clearOnlineLayer();
+
     if (!this.onlineScenery || !this.region.online.enabled) {
-      this.reportScenery({ regionId: this.region.id, mode: "offline", message: `${this.region.name}: procedural scenery`, attribution: this.region.online.attribution });
+      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: procedural scenery`, attribution: this.region.online.attribution });
       return;
     }
 
     const region = this.region;
+    const detail = this.osmDetail;
+    const detailLabel = detail === "high" ? "high-res" : "standard";
     const controller = new AbortController();
     this.sceneryAbortController = controller;
-    this.reportScenery({ regionId: region.id, mode: "loading", message: `Loading live OpenStreetMap scenery for ${region.shortName}` });
+    this.reportScenery({ regionId: region.id, mode: "loading", detail, message: `Loading ${detailLabel} OpenStreetMap scenery for ${region.shortName}` });
 
     try {
-      const data = await loadOpenStreetMapScenery(region, controller.signal);
-      if (this.region.id !== region.id || controller.signal.aborted) {
+      const data = await loadOpenStreetMapScenery(region, { detail, signal: controller.signal });
+      if (this.region.id !== region.id || this.osmDetail !== detail || controller.signal.aborted) {
         return;
       }
 
       this.addOnlineScenery(data);
-      this.reportScenery({ regionId: region.id, mode: "online", message: `Live OpenStreetMap layer: ${data.features.length} features`, featureCount: data.features.length, attribution: data.attribution });
+      this.reportScenery({ regionId: region.id, mode: "online", detail, message: `${detailLabel === "high-res" ? "High-res" : "Standard"} OpenStreetMap layer: ${data.features.length} features`, featureCount: data.features.length, radiusMeters: data.radiusMeters, attribution: data.attribution });
     } catch (error) {
       if (controller.signal.aborted) {
         return;
       }
 
       const message = error instanceof Error ? error.message : "Unable to load online scenery";
-      this.reportScenery({ regionId: region.id, mode: "error", message: `Using procedural fallback: ${message}`, attribution: region.online.attribution });
+      this.reportScenery({ regionId: region.id, mode: "error", detail, message: `Using procedural fallback: ${message}`, attribution: region.online.attribution });
     }
   }
 
@@ -659,21 +693,41 @@ export class FlightScene {
     const buildingMaterial = new THREE.MeshStandardMaterial({ color: 0x8f938d, roughness: 0.74 });
     const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x303633, roughness: 0.82 });
     const motorwayMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4f50, roughness: 0.8 });
+    const railMaterial = new THREE.MeshStandardMaterial({ color: 0x232827, roughness: 0.48, metalness: 0.16 });
+    const airportMaterial = new THREE.MeshStandardMaterial({ color: 0x404846, roughness: 0.78 });
     const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x3d8398, roughness: 0.5, transparent: true, opacity: 0.72 });
     const greenMaterial = new THREE.MeshStandardMaterial({ color: 0x4f7746, roughness: 0.94 });
+    const highDetail = data.detail === "high";
 
     for (const feature of data.features) {
       if (feature.kind === "road") {
         this.addOnlineRoad(group, feature, feature.tags.highway === "motorway" || feature.tags.highway === "trunk" ? motorwayMaterial : roadMaterial);
+      } else if (feature.kind === "rail") {
+        this.addOnlineRoad(group, feature, railMaterial);
+      } else if (feature.kind === "airport") {
+        if (highDetail && this.addOnlinePolygonFeature(group, feature, airportMaterial, 0.08, "flat")) {
+          continue;
+        }
+        this.addOnlineRoad(group, feature, airportMaterial);
       } else if (feature.kind === "building") {
+        if (highDetail && this.addOnlinePolygonFeature(group, feature, buildingMaterial, feature.heightMeters, "extruded")) {
+          continue;
+        }
         this.addOnlineBoxFeature(group, feature, buildingMaterial, feature.heightMeters);
       } else if (feature.kind === "water") {
+        if (highDetail && this.addOnlinePolygonFeature(group, feature, waterMaterial, 0.08, "flat")) {
+          continue;
+        }
         this.addOnlineBoxFeature(group, feature, waterMaterial, 0.08);
       } else {
+        if (highDetail && this.addOnlinePolygonFeature(group, feature, greenMaterial, 0.06, "flat")) {
+          continue;
+        }
         this.addOnlineBoxFeature(group, feature, greenMaterial, 0.06);
       }
     }
 
+    this.onlineSceneryGroup = group;
     this.worldRoot.add(group);
   }
 
@@ -721,6 +775,59 @@ export class FlightScene {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
     mesh.position.set((bounds.minX + bounds.maxX) / 2, height / 2 + 0.28, (bounds.minZ + bounds.maxZ) / 2);
     group.add(mesh);
+  }
+
+  private addOnlinePolygonFeature(group: THREE.Group, feature: OnlineSceneryFeature, material: THREE.Material, heightMeters: number, mode: "flat" | "extruded"): boolean {
+    if (!this.isClosedOnlineFeature(feature)) {
+      return false;
+    }
+
+    const points = feature.points.map((point) => this.geodeticToWorld(point.latitudeDeg, point.longitudeDeg)).filter((point) => this.isInsideWorld(point.x, point.z));
+    if (points.length < 4) {
+      return false;
+    }
+
+    const openPoints = points.slice(0, -1);
+    const bounds = openPoints.reduce(
+      (current, point) => ({
+        minX: Math.min(current.minX, point.x),
+        maxX: Math.max(current.maxX, point.x),
+        minZ: Math.min(current.minZ, point.z),
+        maxZ: Math.max(current.maxZ, point.z)
+      }),
+      { minX: Number.POSITIVE_INFINITY, maxX: Number.NEGATIVE_INFINITY, minZ: Number.POSITIVE_INFINITY, maxZ: Number.NEGATIVE_INFINITY }
+    );
+    const width = bounds.maxX - bounds.minX;
+    const depth = bounds.maxZ - bounds.minZ;
+    const maxSpan = feature.kind === "building" ? 220 : feature.kind === "airport" ? 1200 : 900;
+    if (width < 3 || depth < 3 || width > maxSpan || depth > maxSpan) {
+      return false;
+    }
+
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+    const shapePoints = openPoints.map((point) => new THREE.Vector2(point.x - centerX, -(point.z - centerZ)));
+    const shape = new THREE.Shape(shapePoints);
+    const geometry = mode === "extruded"
+      ? new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.4, heightMeters), bevelEnabled: false })
+      : new THREE.ShapeGeometry(shape);
+    geometry.rotateX(-Math.PI / 2);
+    geometry.computeVertexNormals();
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(centerX, mode === "extruded" ? 0.28 : 0.34, centerZ);
+    group.add(mesh);
+    return true;
+  }
+
+  private isClosedOnlineFeature(feature: OnlineSceneryFeature): boolean {
+    if (feature.points.length < 4) {
+      return false;
+    }
+
+    const first = feature.points[0];
+    const last = feature.points[feature.points.length - 1];
+    return Math.abs(first.latitudeDeg - last.latitudeDeg) < 0.000001 && Math.abs(first.longitudeDeg - last.longitudeDeg) < 0.000001;
   }
 
   private buildAircraft(): void {

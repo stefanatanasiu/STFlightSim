@@ -59,6 +59,12 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await expect(canvas).toBeVisible();
   await page.waitForTimeout(1800);
   await expect(page.getByLabel("Scenery region")).toHaveValue("egll-city");
+  await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "false");
+  await expectNonblankCanvas(canvas);
+
+  await page.getByRole("button", { name: "High-resolution OpenStreetMap" }).click();
+  await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "true");
+  await page.waitForTimeout(250);
   await expectNonblankCanvas(canvas);
 
   await page.screenshot({ path: "test-results/stflightsim-pilot-e2e.png", fullPage: true });

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Gauge, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings } from "lucide-react";
+import { Camera, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings } from "lucide-react";
 import { InputManager } from "@stflightsim/input";
 import { formatGaugeValue, getPrimaryWarning } from "@stflightsim/instruments";
 import { FlightScene, type SceneryLoadStatus } from "@stflightsim/renderer";
-import { DEFAULT_SCENERY_REGION, SCENERY_REGIONS, type SceneryRegionId } from "@stflightsim/scenery";
+import { DEFAULT_SCENERY_REGION, SCENERY_REGIONS, type OnlineSceneryDetail, type SceneryRegionId } from "@stflightsim/scenery";
 import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT, type AircraftTelemetry, type CameraViewMode, type SimulationStatus } from "@stflightsim/shared";
 import { SimulationClient } from "@stflightsim/simulation";
 
@@ -21,7 +21,8 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<CameraViewMode>("pilot");
   const [regionId, setRegionId] = useState<SceneryRegionId>(DEFAULT_SCENERY_REGION.id);
-  const [sceneryStatus, setSceneryStatus] = useState<SceneryLoadStatus>({ regionId: DEFAULT_SCENERY_REGION.id, mode: "loading", message: "Preparing scenery" });
+  const [osmDetail, setOsmDetail] = useState<OnlineSceneryDetail>("standard");
+  const [sceneryStatus, setSceneryStatus] = useState<SceneryLoadStatus>({ regionId: DEFAULT_SCENERY_REGION.id, mode: "loading", detail: "standard", message: "Preparing scenery" });
   const activeRegion = useMemo(() => SCENERY_REGIONS.find((region) => region.id === regionId) ?? DEFAULT_SCENERY_REGION, [regionId]);
   const warning = getPrimaryWarning(telemetry);
 
@@ -34,7 +35,7 @@ export function App() {
       return;
     }
 
-    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, onSceneryStatus: setSceneryStatus });
+    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, osmDetail: "standard", onSceneryStatus: setSceneryStatus });
     sceneRef.current = scene;
     scene.setViewMode("pilot");
     return () => {
@@ -46,6 +47,10 @@ export function App() {
   useEffect(() => {
     sceneRef.current?.setViewMode(viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    sceneRef.current?.setOsmDetail(osmDetail);
+  }, [osmDetail]);
 
   useEffect(() => {
     sceneRef.current?.setRegion(activeRegion);
@@ -129,6 +134,7 @@ export function App() {
   };
 
   const viewLabel = viewMode === "pilot" ? "Pilot" : viewMode === "cockpit" ? "Cockpit" : "Chase";
+  const osmDetailLabel = osmDetail === "high" ? "OSM high" : "OSM standard";
 
   return (
     <main className="simulator-shell">
@@ -143,6 +149,7 @@ export function App() {
           <span>{activeGamepad ? "Gamepad" : "Keyboard"}</span>
           <span>{viewLabel}</span>
           <span>{activeRegion.shortName}</span>
+          <span>{osmDetailLabel}</span>
           <span>{telemetry?.onGround ? "Ground" : "Airborne"}</span>
         </div>
         <div className="toolbar" aria-label="Simulator toolbar">
@@ -156,6 +163,9 @@ export function App() {
               ))}
             </select>
           </label>
+          <button type="button" className={`icon-button detail-button ${osmDetail === "high" ? "active" : ""}`} onClick={() => setOsmDetail((detail) => detail === "high" ? "standard" : "high")} title="High-resolution OpenStreetMap" aria-label="High-resolution OpenStreetMap" aria-pressed={osmDetail === "high"}>
+            <Layers size={17} />
+          </button>
           <ViewButton mode="pilot" active={viewMode === "pilot"} onSelect={setViewMode} label="Pilot view" />
           <ViewButton mode="cockpit" active={viewMode === "cockpit"} onSelect={setViewMode} label="Cockpit view" />
           <ViewButton mode="chase" active={viewMode === "chase"} onSelect={setViewMode} label="Chase view" />
@@ -191,7 +201,7 @@ export function App() {
         <div>{activeRegion.airportName}</div>
         <div className={`scenery-status scenery-${sceneryStatus.mode}`}>{sceneryStatus.message}</div>
         <div>JSBSim/WASM adapter staged</div>
-        <div>{sceneryStatus.mode === "online" ? "OpenStreetMap live vectors" : "Procedural fallback ready"}</div>
+        <div>{sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready"}</div>
       </footer>
     </main>
   );

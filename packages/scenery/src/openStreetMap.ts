@@ -1,6 +1,12 @@
 import type { SceneryRegion } from "./demoRegion";
 
-export type OnlineSceneryFeatureKind = "building" | "road" | "water" | "green";
+export type OnlineSceneryDetail = "standard" | "high";
+export type OnlineSceneryFeatureKind = "building" | "road" | "water" | "green" | "rail" | "airport";
+
+export interface OpenStreetMapSceneryOptions {
+  detail?: OnlineSceneryDetail;
+  signal?: AbortSignal;
+}
 
 export interface OnlineSceneryPoint {
   latitudeDeg: number;
@@ -18,9 +24,19 @@ export interface OnlineSceneryFeature {
 
 export interface OnlineSceneryData {
   provider: "openstreetmap-overpass";
+  detail: OnlineSceneryDetail;
   attribution: string;
   loadedAtMs: number;
+  radiusMeters: number;
+  featureLimit: number;
   features: OnlineSceneryFeature[];
+}
+
+interface OverpassProfile {
+  detail: OnlineSceneryDetail;
+  radiusMeters: number;
+  maxFeatures: number;
+  timeoutSeconds: number;
 }
 
 interface OverpassGeometryPoint {
@@ -39,13 +55,14 @@ interface OverpassResponse {
   elements?: OverpassElement[];
 }
 
-export async function loadOpenStreetMapScenery(region: SceneryRegion, signal?: AbortSignal): Promise<OnlineSceneryData> {
-  const query = buildOverpassQuery(region);
+export async function loadOpenStreetMapScenery(region: SceneryRegion, options: OpenStreetMapSceneryOptions = {}): Promise<OnlineSceneryData> {
+  const profile = getOverpassProfile(region, options.detail ?? "standard");
+  const query = buildOverpassQuery(region, profile);
   const response = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
     body: new URLSearchParams({ data: query }),
-    signal
+    signal: options.signal
   });
 
   if (!response.ok) {
@@ -57,36 +74,64 @@ export async function loadOpenStreetMapScenery(region: SceneryRegion, signal?: A
     .filter((element) => element.type === "way" && element.geometry && element.geometry.length > 1)
     .map((element) => toFeature(element))
     .filter((feature): feature is OnlineSceneryFeature => Boolean(feature))
-    .slice(0, region.online.maxFeatures);
+    .slice(0, profile.maxFeatures);
 
   return {
     provider: "openstreetmap-overpass",
+    detail: profile.detail,
     attribution: region.online.attribution,
     loadedAtMs: Date.now(),
+    radiusMeters: profile.radiusMeters,
+    featureLimit: profile.maxFeatures,
     features
   };
 }
 
-function buildOverpassQuery(region: SceneryRegion): string {
+function getOverpassProfile(region: SceneryRegion, detail: OnlineSceneryDetail): OverpassProfile {
+  if (detail === "high") {
+    return {
+      detail,
+      radiusMeters: Math.min(5200, Math.round(region.online.radiusMeters * 1.55)),
+      maxFeatures: Math.min(2200, Math.round(region.online.maxFeatures * 2.35)),
+      timeoutSeconds: 24
+    };
+  }
+
+  return {
+    detail,
+    radiusMeters: region.online.radiusMeters,
+    maxFeatures: region.online.maxFeatures,
+    timeoutSeconds: 12
+  };
+}
+
+function buildOverpassQuery(region: SceneryRegion, profile: OverpassProfile): string {
   const latitudeMeters = 1852 * 60;
   const longitudeMeters = latitudeMeters * Math.cos((region.origin.latitudeDeg * Math.PI) / 180);
-  const latitudeDelta = region.online.radiusMeters / latitudeMeters;
-  const longitudeDelta = region.online.radiusMeters / longitudeMeters;
+  const latitudeDelta = profile.radiusMeters / latitudeMeters;
+  const longitudeDelta = profile.radiusMeters / longitudeMeters;
   const south = region.origin.latitudeDeg - latitudeDelta;
   const west = region.origin.longitudeDeg - longitudeDelta;
   const north = region.origin.latitudeDeg + latitudeDelta;
   const east = region.origin.longitudeDeg + longitudeDelta;
   const bbox = `${south},${west},${north},${east}`;
+  const highDetailWays = profile.detail === "high" ? `
+  way["highway"~"pedestrian|footway|cycleway|path|track"](${bbox});
+  way["railway"~"rail|light_rail|subway|tram"](${bbox});
+  way["aeroway"~"runway|taxiway|apron|hangar|terminal"](${bbox});
+  way["natural"~"wood|beach|wetland"](${bbox});
+  way["leisure"~"park|marina|golf_course|pitch|garden|sports_centre"](${bbox});
+  way["amenity"~"parking|school|university|hospital"](${bbox});` : "";
 
   return `
-[out:json][timeout:12];
+[out:json][timeout:${profile.timeoutSeconds}];
 (
   way["building"](${bbox});
   way["highway"~"motorway|trunk|primary|secondary|tertiary|residential|service|unclassified|living_street"](${bbox});
   way["natural"="water"](${bbox});
   way["waterway"](${bbox});
   way["landuse"~"forest|grass|meadow|recreation_ground|residential|commercial|industrial"](${bbox});
-  way["leisure"~"park|marina|golf_course"](${bbox});
+  way["leisure"~"park|marina|golf_course"](${bbox});${highDetailWays}
 );
 out geom;
 `;
@@ -120,11 +165,19 @@ function classifyFeature(tags: Record<string, string>): OnlineSceneryFeatureKind
     return "road";
   }
 
+  if (tags.railway) {
+    return "rail";
+  }
+
+  if (tags.aeroway) {
+    return "airport";
+  }
+
   if (tags.natural === "water" || tags.waterway) {
     return "water";
   }
 
-  if (tags.landuse || tags.leisure) {
+  if (tags.landuse || tags.leisure || tags.amenity || tags.natural) {
     return "green";
   }
 
@@ -150,6 +203,14 @@ function getFeatureHeightMeters(kind: OnlineSceneryFeatureKind, tags: Record<str
 }
 
 function getFeatureWidthMeters(kind: OnlineSceneryFeatureKind, tags: Record<string, string>): number {
+  if (kind === "rail") {
+    return 3.5;
+  }
+
+  if (kind === "airport") {
+    return tags.aeroway === "runway" ? 28 : tags.aeroway === "taxiway" ? 12 : 0;
+  }
+
   if (kind !== "road") {
     return 0;
   }
@@ -166,6 +227,10 @@ function getFeatureWidthMeters(kind: OnlineSceneryFeatureKind, tags: Record<stri
       return 9;
     case "service":
       return 5;
+    case "footway":
+    case "cycleway":
+    case "path":
+      return 2.4;
     default:
       return 7;
   }

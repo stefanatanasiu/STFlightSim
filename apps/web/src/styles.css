@@ -168,7 +168,8 @@ select {
   outline-offset: 1px;
 }
 
-.view-button.active {
+.view-button.active,
+.detail-button.active {
   border-color: rgba(116, 224, 185, 0.7);
   background: rgba(54, 184, 145, 0.32);
   color: #c9ffe8;
