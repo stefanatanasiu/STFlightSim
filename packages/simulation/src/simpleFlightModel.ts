@@ -69,7 +69,10 @@ export function stepSimpleFlightModel(state: SimpleFlightState, controls: Aircra
   const aoaLift = clamp((angleOfAttackDeg + flight.liftAoAOffsetDeg) / flight.liftAoARangeDeg, flight.minLiftFactor, flight.maxLiftFactor);
   const speedRatio = state.airspeedKts / Math.max(stallSpeedKts, 1);
   const liftRatio = speedRatio * speedRatio * aoaLift / bankLoadFactor;
-  const stalled = !state.onGround && (angleOfAttackDeg > flight.stallAoADeg || state.airspeedKts < stallSpeedKts * 1.04 || liftRatio < 0.62);
+  const airlinerLowSpeedStall = state.airspeedKts < stallSpeedKts * 0.98 && liftRatio < 0.78;
+  const conventionalLowSpeedStall = state.airspeedKts < stallSpeedKts * 1.04;
+  const lowLiftBreakStall = liftRatio < 0.62 && angleOfAttackDeg > flight.stallAoADeg * 0.55;
+  const stalled = !state.onGround && (angleOfAttackDeg > flight.stallAoADeg || (profile.category === "airliner" ? airlinerLowSpeedStall : conventionalLowSpeedStall) || lowLiftBreakStall);
   const inducedDrag = Math.max(0, angleOfAttackDeg - flight.liftAoAOffsetDeg) * flight.inducedDragFactor;
   const drag = flight.dragLinear * state.airspeedKts + flight.dragQuadratic * state.airspeedKts * state.airspeedKts + flapsDeg * flight.flapDragFactor + Math.abs(bankDeg) * flight.bankDragFactor + inducedDrag;
   const thrust = throttlePower * Math.max(flight.thrustMinAccelKts, flight.thrustMaxAccelKts - state.airspeedKts * flight.thrustSpeedDecay);

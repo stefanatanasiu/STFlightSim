@@ -45,9 +45,13 @@ describe("development flight model", () => {
   it("models the A320 as a heavier transport jet", () => {
     let state = createInitialFlightState(undefined, A320_PROFILE);
     const controls = { ...DEFAULT_AIRCRAFT_CONTROLS, throttle: 1, elevator: 0.7, flapsIndex: 2 };
+    let stalledSteps = 0;
 
     for (let step = 0; step < 2400; step += 1) {
       state = stepSimpleFlightModel(state, controls, STANDARD_ENVIRONMENT, 1 / 60, undefined, A320_PROFILE);
+      if (state.stalled) {
+        stalledSteps += 1;
+      }
     }
 
     if (state.onGround) {
@@ -57,5 +61,25 @@ describe("development flight model", () => {
     expect(state.airspeedKts).toBeGreaterThan(150);
     expect(state.airspeedKts).toBeLessThan(300);
     expect(state.verticalSpeedFpm).toBeGreaterThan(900);
+    expect(stalledSteps).toBe(0);
+  });
+
+  it("does not flash an A320 stall warning just after full-throttle rotation", () => {
+    const initialState = createInitialFlightState(undefined, A320_PROFILE);
+    const rotationState = {
+      ...initialState,
+      onGround: false,
+      altitudeFt: initialState.altitudeFt + 12,
+      airspeedKts: A320_PROFILE.rotationSpeedKts * 0.99,
+      verticalSpeedFpm: A320_PROFILE.flight.liftoffVerticalSpeedFpm,
+      pitchDeg: 8,
+      bankDeg: 0
+    };
+    const controls = { ...DEFAULT_AIRCRAFT_CONTROLS, throttle: 1, elevator: 0.65, flapsIndex: 0 };
+
+    const nextState = stepSimpleFlightModel(rotationState, controls, STANDARD_ENVIRONMENT, 1 / 60, undefined, A320_PROFILE);
+
+    expect(nextState.stalled).toBe(false);
+    expect(nextState.verticalSpeedFpm).toBeGreaterThan(0);
   });
 });

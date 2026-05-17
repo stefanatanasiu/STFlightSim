@@ -57,10 +57,15 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await expect(page.locator(".hud-overlay")).toBeVisible();
 
   await page.keyboard.press("KeyH");
-  await expect(page.getByRole("button", { name: "Flight overlay" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator(".hud-overlay")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Flight controls help" })).toBeVisible();
+  await expect(page.getByText("Paused while open")).toBeVisible();
+  await expect(page.getByText("Pause or resume")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
   await page.keyboard.press("KeyH");
-  await expect(page.getByRole("button", { name: "Flight overlay" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("dialog", { name: "Flight controls help" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Resume" }).click();
   await expect(page.locator(".hud-overlay")).toBeVisible();
 
   const canvas = page.locator("canvas.scene-canvas");

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings, Shield } from "lucide-react";
+import { Camera, CircleHelp, Eye, EyeOff, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings, Shield, X } from "lucide-react";
 import { AIRCRAFT_PROFILES, DEFAULT_AIRCRAFT_PROFILE_ID, getAircraftProfile, type AircraftId } from "@stflightsim/aircraft";
 import { InputManager } from "@stflightsim/input";
 import { formatGaugeValue, getPrimaryWarning } from "@stflightsim/instruments";
@@ -9,6 +9,45 @@ import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT, type AircraftTelemetry
 import { SimulationClient } from "@stflightsim/simulation";
 
 const VIEW_MODES: CameraViewMode[] = ["pilot", "cockpit", "chase"];
+
+const CONTROL_GROUPS = [
+  {
+    title: "Flight",
+    items: [
+      ["W / Up", "Pitch nose down"],
+      ["S / Down", "Pitch nose up"],
+      ["A / D", "Roll left / right"],
+      ["Q / E", "Rudder left / right"]
+    ]
+  },
+  {
+    title: "Power",
+    items: [
+      ["Shift", "Increase throttle"],
+      ["Ctrl", "Decrease throttle"],
+      ["C / X", "Mixture or condition up / down"],
+      ["B / Space", "Wheel brakes"]
+    ]
+  },
+  {
+    title: "Configuration",
+    items: [
+      ["F", "Extend flaps"],
+      ["R", "Retract flaps"],
+      ["[ / ]", "Trim nose down / up"],
+      ["Backspace", "Reset on runway"]
+    ]
+  },
+  {
+    title: "Views",
+    items: [
+      ["1 / 2 / 3", "Pilot / cockpit / chase"],
+      ["V", "Cycle camera"],
+      ["H", "Show or hide this help"],
+      ["P", "Pause or resume"]
+    ]
+  }
+] as const;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -20,6 +59,7 @@ export function App() {
   const [paused, setPaused] = useState(false);
   const [activeGamepad, setActiveGamepad] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [viewMode, setViewMode] = useState<CameraViewMode>("pilot");
   const [flightOverlayVisible, setFlightOverlayVisible] = useState(true);
   const [aircraftId, setAircraftId] = useState<AircraftId>(DEFAULT_AIRCRAFT_PROFILE_ID);
@@ -29,6 +69,24 @@ export function App() {
   const activeAircraft = useMemo(() => getAircraftProfile(aircraftId) ?? AIRCRAFT_PROFILES[0], [aircraftId]);
   const activeRegion = useMemo(() => SCENERY_REGIONS.find((region) => region.id === regionId) ?? DEFAULT_SCENERY_REGION, [regionId]);
   const warning = getPrimaryWarning(telemetry);
+
+  const setSimulationPaused = (nextPaused: boolean) => {
+    pausedRef.current = nextPaused;
+    setPaused(nextPaused);
+    simulationRef.current?.setPaused(nextPaused);
+  };
+
+  const toggleHelp = () => {
+    setHelpOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        setSimulationPaused(true);
+      }
+      return nextOpen;
+    });
+  };
+
+  const closeHelp = () => setHelpOpen(false);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -64,12 +122,18 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || event.code !== "KeyH" || isEditableElement(event.target)) {
+      if (event.repeat || isEditableElement(event.target)) {
         return;
       }
 
-      event.preventDefault();
-      setFlightOverlayVisible((visible) => !visible);
+      if (event.code === "KeyH") {
+        event.preventDefault();
+        toggleHelp();
+      }
+
+      if (event.code === "Escape") {
+        setHelpOpen(false);
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -105,10 +169,7 @@ export function App() {
       simulation.setControls(snapshot.controls);
 
       if (snapshot.commands.pauseToggleRequested) {
-        const nextPaused = !pausedRef.current;
-        pausedRef.current = nextPaused;
-        setPaused(nextPaused);
-        simulation.setPaused(nextPaused);
+        setSimulationPaused(!pausedRef.current);
       }
 
       if (snapshot.commands.resetRequested) {
@@ -151,10 +212,7 @@ export function App() {
   }, [telemetry]);
 
   const togglePause = () => {
-    const nextPaused = !paused;
-    pausedRef.current = nextPaused;
-    setPaused(nextPaused);
-    simulationRef.current?.setPaused(nextPaused);
+    setSimulationPaused(!pausedRef.current);
   };
 
   const viewLabel = viewMode === "pilot" ? "Pilot" : viewMode === "cockpit" ? "Cockpit" : "Chase";
@@ -203,8 +261,11 @@ export function App() {
           <button type="button" className={`icon-button detail-button ${osmDetail === "high" ? "active" : ""}`} onClick={() => setOsmDetail((detail) => detail === "high" ? "standard" : "high")} title="High-resolution OpenStreetMap" aria-label="High-resolution OpenStreetMap" aria-pressed={osmDetail === "high"}>
             <Layers size={17} />
           </button>
-          <button type="button" className={`icon-button detail-button ${flightOverlayVisible ? "active" : ""}`} onClick={() => setFlightOverlayVisible((visible) => !visible)} title="Flight overlay (H)" aria-label="Flight overlay" aria-pressed={flightOverlayVisible}>
+          <button type="button" className={`icon-button detail-button ${flightOverlayVisible ? "active" : ""}`} onClick={() => setFlightOverlayVisible((visible) => !visible)} title="Flight overlay" aria-label="Flight overlay" aria-pressed={flightOverlayVisible}>
             {flightOverlayVisible ? <Eye size={17} /> : <EyeOff size={17} />}
+          </button>
+          <button type="button" className={`icon-button detail-button ${helpOpen ? "active" : ""}`} onClick={toggleHelp} title="Help (H)" aria-label="Help" aria-pressed={helpOpen}>
+            <CircleHelp size={17} />
           </button>
           <ViewButton mode="pilot" active={viewMode === "pilot"} onSelect={setViewMode} label="Pilot view" />
           <ViewButton mode="cockpit" active={viewMode === "cockpit"} onSelect={setViewMode} label="Cockpit view" />
@@ -225,6 +286,7 @@ export function App() {
 
       {flightOverlayVisible && viewMode === "pilot" && <HudOverlay telemetry={telemetry} />}
       {flightOverlayVisible && viewMode === "cockpit" && <CockpitOverlay telemetry={telemetry} />}
+      {helpOpen && <HelpOverlay onClose={closeHelp} />}
 
       <section className="left-stack" aria-label="Primary instruments">
         <InstrumentPanel telemetry={telemetry} />
@@ -260,6 +322,43 @@ function ViewButton({ mode, active, onSelect, label }: { mode: CameraViewMode; a
     <button type="button" className={`icon-button view-button ${active ? "active" : ""}`} onClick={() => onSelect(mode)} title={label} aria-label={label}>
       {mode === "pilot" ? <Monitor size={17} /> : mode === "cockpit" ? <Gauge size={17} /> : <Camera size={17} />}
     </button>
+  );
+}
+
+function HelpOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="help-backdrop">
+      <section className="help-dialog" role="dialog" aria-modal="true" aria-label="Flight controls help">
+        <div className="help-header">
+          <div>
+            <p>Paused while open</p>
+            <h2>Flight Controls</h2>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose} title="Close help" aria-label="Close help">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="help-grid">
+          {CONTROL_GROUPS.map((group) => (
+            <section key={group.title} className="help-section">
+              <h3>{group.title}</h3>
+              <dl>
+                {group.items.map(([keys, action]) => (
+                  <div key={keys} className="help-row">
+                    <dt>{keys.split(" / ").map((key) => <kbd key={key}>{key}</kbd>)}</dt>
+                    <dd>{action}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+        <div className="help-note">
+          <strong>A320 takeoff</strong>
+          <span>Use F once or twice for takeoff flaps, hold Shift for thrust, then rotate gently near 145 KIAS.</span>
+        </div>
+      </section>
+    </div>
   );
 }
 

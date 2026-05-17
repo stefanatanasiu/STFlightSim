@@ -46,6 +46,7 @@ select {
 .top-bar,
 .bottom-strip,
 .panel,
+.help-dialog,
 .warning-banner {
   backdrop-filter: blur(14px);
   background: rgba(13, 20, 18, 0.76);
@@ -613,6 +614,119 @@ select {
   letter-spacing: 0;
 }
 
+.help-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 88px 18px 54px;
+  background: rgba(5, 9, 8, 0.46);
+}
+
+.help-dialog {
+  width: min(760px, calc(100vw - 28px));
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.help-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.help-header p,
+.help-header h2 {
+  margin: 0;
+}
+
+.help-header p {
+  color: #bff2c1;
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.help-header h2 {
+  margin-top: 4px;
+  color: #f4f0df;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 22px;
+}
+
+.help-section h3 {
+  margin: 0 0 9px;
+  color: #f4f0df;
+  font-size: 0.82rem;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.help-section dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.help-row {
+  display: grid;
+  grid-template-columns: minmax(116px, auto) 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.help-row dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.help-row dd {
+  margin: 0;
+  color: #d7ddcf;
+  font-size: 0.84rem;
+}
+
+.help-row kbd {
+  min-width: 28px;
+  border: 1px solid rgba(244, 240, 223, 0.18);
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: #f4f0df;
+  background: rgba(244, 240, 223, 0.09);
+  font-family: inherit;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.help-note {
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(244, 240, 223, 0.12);
+  padding-top: 14px;
+  color: #d7ddcf;
+  font-size: 0.84rem;
+}
+
+.help-note strong {
+  color: #ffd989;
+  text-transform: uppercase;
+}
+
 .bottom-strip {
   position: absolute;
   left: 14px;
@@ -728,5 +842,24 @@ select {
 
   .gauge-tile strong {
     font-size: 1.25rem;
+  }
+
+  .help-backdrop {
+    align-items: start;
+    padding-top: 74px;
+  }
+
+  .help-dialog {
+    max-height: calc(100vh - 94px);
+  }
+
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 4px;
   }
 }
