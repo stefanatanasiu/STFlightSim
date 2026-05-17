@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@stflightsim/aircraft": "0.1.0",
     "@stflightsim/scenery": "0.1.0",
     "@stflightsim/shared": "0.1.0",
     "three": "^0.176.0"

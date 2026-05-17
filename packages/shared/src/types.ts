@@ -1,5 +1,6 @@
 export type MagnetoState = "off" | "left" | "right" | "both";
 export type CameraViewMode = "pilot" | "cockpit" | "chase";
+export type AircraftCategory = "piston" | "fighter" | "airliner";
 
 export interface AircraftControls {
   elevator: number;
@@ -37,6 +38,10 @@ export const DEFAULT_AIRCRAFT_CONTROLS: AircraftControls = {
 
 export interface AircraftTelemetry {
   timestampMs: number;
+  aircraftId: string;
+  aircraftName: string;
+  aircraftShortName: string;
+  aircraftCategory: AircraftCategory;
   simTimeSec: number;
   latitudeDeg: number;
   longitudeDeg: number;
@@ -52,8 +57,18 @@ export interface AircraftTelemetry {
   gLoad: number;
   rpm: number;
   manifoldPressureInHg: number;
+  enginePrimaryLabel: string;
+  enginePrimaryValue: number;
+  enginePrimaryMax: number;
+  enginePrimarySuffix?: string;
+  engineSecondaryLabel: string;
+  engineSecondaryValue: number;
+  engineSecondaryMax: number;
+  engineSecondarySuffix?: string;
   fuelGallons: number;
+  fuelCapacityGallons: number;
   fuelFlowGph: number;
+  maxFuelFlowGph: number;
   flapsDeg: number;
   throttle: number;
   mixture: number;
@@ -87,6 +102,7 @@ export type SimulationInboundMessage =
   | { type: "start" }
   | { type: "reset" }
   | { type: "set-region"; regionId: string }
+  | { type: "set-aircraft"; aircraftId: string }
   | { type: "set-controls"; controls: AircraftControls }
   | { type: "set-paused"; paused: boolean }
   | { type: "set-environment"; environment: EnvironmentState };

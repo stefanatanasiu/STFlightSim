@@ -33,6 +33,10 @@ export class SimulationClient {
     this.post({ type: "set-region", regionId });
   }
 
+  setAircraft(aircraftId: string): void {
+    this.post({ type: "set-aircraft", aircraftId });
+  }
+
   setPaused(paused: boolean): void {
     this.post({ type: "set-paused", paused });
   }

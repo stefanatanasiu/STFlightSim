@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@stflightsim/aircraft": "0.1.0",
     "@stflightsim/input": "0.1.0",
     "@stflightsim/instruments": "0.1.0",
     "@stflightsim/renderer": "0.1.0",

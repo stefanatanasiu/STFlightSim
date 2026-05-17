@@ -9,6 +9,7 @@
     "types": ["vite/client"]
   },
   "references": [
+    { "path": "../../packages/aircraft" },
     { "path": "../../packages/shared" },
     { "path": "../../packages/input" },
     { "path": "../../packages/renderer" },

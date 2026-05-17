@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings } from "lucide-react";
+import { Camera, Eye, EyeOff, Gauge, Layers, Map, Monitor, Pause, Plane, Play, RotateCcw, Settings, Shield } from "lucide-react";
+import { AIRCRAFT_PROFILES, DEFAULT_AIRCRAFT_PROFILE_ID, getAircraftProfile, type AircraftId } from "@stflightsim/aircraft";
 import { InputManager } from "@stflightsim/input";
 import { formatGaugeValue, getPrimaryWarning } from "@stflightsim/instruments";
 import { FlightScene, type SceneryLoadStatus } from "@stflightsim/renderer";
@@ -21,9 +22,11 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<CameraViewMode>("pilot");
   const [flightOverlayVisible, setFlightOverlayVisible] = useState(true);
+  const [aircraftId, setAircraftId] = useState<AircraftId>(DEFAULT_AIRCRAFT_PROFILE_ID);
   const [regionId, setRegionId] = useState<SceneryRegionId>(DEFAULT_SCENERY_REGION.id);
   const [osmDetail, setOsmDetail] = useState<OnlineSceneryDetail>("standard");
   const [sceneryStatus, setSceneryStatus] = useState<SceneryLoadStatus>({ regionId: DEFAULT_SCENERY_REGION.id, mode: "loading", detail: "standard", message: "Preparing scenery" });
+  const activeAircraft = useMemo(() => getAircraftProfile(aircraftId) ?? AIRCRAFT_PROFILES[0], [aircraftId]);
   const activeRegion = useMemo(() => SCENERY_REGIONS.find((region) => region.id === regionId) ?? DEFAULT_SCENERY_REGION, [regionId]);
   const warning = getPrimaryWarning(telemetry);
 
@@ -36,7 +39,7 @@ export function App() {
       return;
     }
 
-    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, osmDetail: "standard", onSceneryStatus: setSceneryStatus });
+    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, osmDetail: "standard", aircraftProfile: activeAircraft, onSceneryStatus: setSceneryStatus });
     sceneRef.current = scene;
     scene.setViewMode("pilot");
     return () => {
@@ -44,6 +47,12 @@ export function App() {
       sceneRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    sceneRef.current?.setAircraftProfile(activeAircraft);
+    simulationRef.current?.setAircraft(activeAircraft.id);
+    setTelemetry(null);
+  }, [activeAircraft]);
 
   useEffect(() => {
     sceneRef.current?.setViewMode(viewMode);
@@ -164,6 +173,7 @@ export function App() {
           <span className={`status-pill status-${status}`}>{status}</span>
           <span>{activeGamepad ? "Gamepad" : "Keyboard"}</span>
           <span>{viewLabel}</span>
+          <span>{activeAircraft.shortName}</span>
           <span>{activeRegion.shortName}</span>
           <span>Three.js</span>
           <span>{osmDetailLabel}</span>
@@ -176,6 +186,16 @@ export function App() {
               {SCENERY_REGIONS.map((region) => (
                 <option key={region.id} value={region.id}>
                   {region.shortName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="scenario-picker aircraft-picker" title="Aircraft">
+            <Shield size={17} aria-hidden="true" />
+            <select aria-label="Aircraft" value={aircraftId} onChange={(event) => setAircraftId(event.target.value as AircraftId)}>
+              {AIRCRAFT_PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.shortName}
                 </option>
               ))}
             </select>
@@ -323,14 +343,23 @@ function InstrumentPanel({ telemetry }: { telemetry: AircraftTelemetry | null })
 }
 
 function EnginePanel({ telemetry }: { telemetry: AircraftTelemetry | null }) {
+  const primaryLabel = telemetry?.enginePrimaryLabel ?? "RPM";
+  const primaryValue = telemetry?.enginePrimaryValue ?? telemetry?.rpm ?? 0;
+  const primaryMax = telemetry?.enginePrimaryMax ?? 2700;
+  const secondaryLabel = telemetry?.engineSecondaryLabel ?? "MP";
+  const secondaryValue = telemetry?.engineSecondaryValue ?? telemetry?.manifoldPressureInHg ?? 0;
+  const secondaryMax = telemetry?.engineSecondaryMax ?? 30;
+  const fuelMax = telemetry?.fuelCapacityGallons ?? 53;
+  const flowMax = telemetry?.maxFuelFlowGph ?? 12;
+
   return (
     <div className="panel engine-panel">
-      <div className="panel-title">Engine</div>
+      <div className="panel-title">Engine {telemetry?.aircraftShortName ? `- ${telemetry.aircraftShortName}` : ""}</div>
       <div className="engine-grid">
-        <LinearGauge label="RPM" value={telemetry?.rpm ?? 0} max={2700} />
-        <LinearGauge label="MP" value={telemetry?.manifoldPressureInHg ?? 0} max={30} suffix="inHg" />
-        <LinearGauge label="Fuel" value={telemetry?.fuelGallons ?? 0} max={53} suffix="gal" />
-        <LinearGauge label="Flow" value={telemetry?.fuelFlowGph ?? 0} max={12} suffix="gph" />
+        <LinearGauge label={primaryLabel} value={primaryValue} max={primaryMax} suffix={telemetry?.enginePrimarySuffix} />
+        <LinearGauge label={secondaryLabel} value={secondaryValue} max={secondaryMax} suffix={telemetry?.engineSecondarySuffix} />
+        <LinearGauge label="Fuel" value={telemetry?.fuelGallons ?? 0} max={fuelMax} suffix="gal" />
+        <LinearGauge label="Flow" value={telemetry?.fuelFlowGph ?? 0} max={flowMax} suffix="gph" />
       </div>
     </div>
   );
@@ -344,7 +373,7 @@ function SystemsPanel({ telemetry, throttle, mixture }: { telemetry: AircraftTel
         <meter min="0" max="1" value={throttle} />
       </div>
       <div className="system-row">
-        <span>Mixture</span>
+        <span>{telemetry?.aircraftCategory === "piston" ? "Mixture" : "Condition"}</span>
         <meter min="0" max="1" value={mixture} />
       </div>
       <div className="system-row">

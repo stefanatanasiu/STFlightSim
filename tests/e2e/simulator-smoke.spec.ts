@@ -67,7 +67,22 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await expect(canvas).toBeVisible();
   await page.waitForTimeout(1800);
   await expect(page.getByLabel("Scenery region")).toHaveValue("egll-city");
+  await expect(page.getByLabel("Aircraft")).toHaveValue("c172-sp-dev");
   await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "false");
+  await expectNonblankCanvas(canvas);
+
+  await page.getByLabel("Aircraft").selectOption("f16c-block50-dev");
+  await expect(page.getByLabel("Aircraft")).toHaveValue("f16c-block50-dev");
+  await expect(page.getByText("F-16C").first()).toBeVisible();
+  await expect(page.getByText("N1").first()).toBeVisible();
+  await page.waitForTimeout(300);
+  await expectNonblankCanvas(canvas);
+
+  await page.getByLabel("Aircraft").selectOption("a320-200-dev");
+  await expect(page.getByLabel("Aircraft")).toHaveValue("a320-200-dev");
+  await expect(page.getByText("A320").first()).toBeVisible();
+  await expect(page.getByText("EGT").first()).toBeVisible();
+  await page.waitForTimeout(300);
   await expectNonblankCanvas(canvas);
 
   await page.getByRole("button", { name: "High-resolution OpenStreetMap" }).click();

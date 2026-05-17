@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { DEFAULT_AIRCRAFT_PROFILE, type AircraftProfile } from "@stflightsim/aircraft";
 import { DEFAULT_SCENERY_REGION, loadOpenStreetMapScenery, type OnlineSceneryData, type OnlineSceneryDetail, type OnlineSceneryFeature, type SceneryRegion } from "@stflightsim/scenery";
 import { degToRad, feetToMeters, localMetersBetween, type AircraftTelemetry, type CameraViewMode } from "@stflightsim/shared";
 
@@ -18,6 +19,7 @@ export interface FlightSceneOptions {
   region?: SceneryRegion;
   onlineScenery?: boolean;
   osmDetail?: OnlineSceneryDetail;
+  aircraftProfile?: AircraftProfile;
   onSceneryStatus?: (status: SceneryLoadStatus) => void;
 }
 
@@ -27,7 +29,7 @@ export class FlightScene {
   private readonly worldRoot = new THREE.Group();
   private readonly camera = new THREE.PerspectiveCamera(64, 1, 0.05, 32000);
   private readonly aircraft = new THREE.Group();
-  private readonly propeller = new THREE.Group();
+  private readonly animatedRotors: THREE.Group[] = [];
   private readonly clock = new THREE.Clock();
   private readonly onSceneryStatus?: (status: SceneryLoadStatus) => void;
   private readonly onlineScenery: boolean;
@@ -39,9 +41,11 @@ export class FlightScene {
   private viewMode: CameraViewMode = "pilot";
   private previousViewMode: CameraViewMode = "pilot";
   private region: SceneryRegion;
+  private aircraftProfile: AircraftProfile;
 
   constructor(private readonly canvas: HTMLCanvasElement, options: FlightSceneOptions = {}) {
     this.region = options.region ?? DEFAULT_SCENERY_REGION;
+    this.aircraftProfile = options.aircraftProfile ?? DEFAULT_AIRCRAFT_PROFILE;
     this.onlineScenery = options.onlineScenery ?? true;
     this.osmDetail = options.osmDetail ?? "standard";
     this.onSceneryStatus = options.onSceneryStatus;
@@ -89,6 +93,15 @@ export class FlightScene {
 
     this.osmDetail = detail;
     this.loadOnlineLayer();
+  }
+
+  setAircraftProfile(profile: AircraftProfile): void {
+    if (this.aircraftProfile.id === profile.id) {
+      return;
+    }
+
+    this.aircraftProfile = profile;
+    this.buildAircraft();
   }
 
   dispose(): void {
@@ -831,6 +844,25 @@ export class FlightScene {
   }
 
   private buildAircraft(): void {
+    this.disposeObject(this.aircraft);
+    this.aircraft.clear();
+    this.animatedRotors.length = 0;
+
+    if (this.aircraftProfile.visual.model === "f16") {
+      this.buildF16Aircraft();
+    } else if (this.aircraftProfile.visual.model === "a320") {
+      this.buildA320Aircraft();
+    } else {
+      this.buildC172Aircraft();
+    }
+
+    this.aircraft.visible = this.viewMode === "chase";
+    if (!this.aircraft.parent) {
+      this.scene.add(this.aircraft);
+    }
+  }
+
+  private buildC172Aircraft(): void {
     const white = new THREE.MeshStandardMaterial({ color: 0xf2eee0, roughness: 0.42, metalness: 0.04 });
     const red = new THREE.MeshStandardMaterial({ color: 0xa9232e, roughness: 0.38 });
     const darkRed = new THREE.MeshStandardMaterial({ color: 0x76202b, roughness: 0.46 });
@@ -902,17 +934,191 @@ export class FlightScene {
     const propBlade = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.58, 0.08), black);
     const propBlade2 = propBlade.clone();
     propBlade2.rotation.z = Math.PI / 2;
-    this.propeller.add(propBlade, propBlade2, spinner);
-    this.propeller.position.set(0, 1.2, -5.2);
+    const propeller = new THREE.Group();
+    propeller.add(propBlade, propBlade2, spinner);
+    propeller.position.set(0, 1.2, -5.2);
+    this.animatedRotors.push(propeller);
 
     const navLeft = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), new THREE.MeshStandardMaterial({ color: 0xc72d33, emissive: 0xc72d33, emissiveIntensity: 0.7 }));
     navLeft.position.set(-5.7, 2.48, -0.55);
     const navRight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), new THREE.MeshStandardMaterial({ color: 0x4ac481, emissive: 0x4ac481, emissiveIntensity: 0.7 }));
     navRight.position.set(5.7, 2.48, -0.55);
 
-    this.aircraft.add(fuselage, nose, cabin, wing, leftWingTip, rightWingTip, leftFlap, rightFlap, tailplane, elevatorStripe, verticalTail, rudderStripe, leftStripe, rightStripe, leftStrut, rightStrut, gear, this.propeller, navLeft, navRight);
-    this.aircraft.visible = false;
-    this.scene.add(this.aircraft);
+    this.aircraft.add(fuselage, nose, cabin, wing, leftWingTip, rightWingTip, leftFlap, rightFlap, tailplane, elevatorStripe, verticalTail, rudderStripe, leftStripe, rightStripe, leftStrut, rightStrut, gear, propeller, navLeft, navRight);
+  }
+
+  private buildF16Aircraft(): void {
+    const grey = new THREE.MeshStandardMaterial({ color: 0x9aa0a2, roughness: 0.45, metalness: 0.08 });
+    const darkGrey = new THREE.MeshStandardMaterial({ color: 0x596166, roughness: 0.5, metalness: 0.12 });
+    const panel = new THREE.MeshStandardMaterial({ color: 0x2c3336, roughness: 0.62, metalness: 0.14 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x1f5d75, roughness: 0.08, metalness: 0.18, transparent: true, opacity: 0.72 });
+    const exhaust = new THREE.MeshStandardMaterial({ color: 0x343230, roughness: 0.32, metalness: 0.72 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xe8ece8, roughness: 0.52, metalness: 0.08 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xb02b2b, roughness: 0.42 });
+    const fuselage = new THREE.Mesh(new THREE.CapsuleGeometry(0.72, 10.2, 10, 28), grey);
+    fuselage.rotation.x = Math.PI / 2;
+    fuselage.position.set(0, 1.34, -0.2);
+    const spine = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.34, 5.2), darkGrey);
+    spine.position.set(0, 1.96, 0.5);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.35, 28), grey);
+    nose.rotation.x = -Math.PI / 2;
+    nose.position.set(0, 1.34, -6.45);
+    const radome = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.1, 24), panel);
+    radome.rotation.x = -Math.PI / 2;
+    radome.position.set(0, 1.34, -8.1);
+    const canopy = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), glass);
+    canopy.scale.set(0.78, 0.36, 1.38);
+    canopy.position.set(0, 2.06, -3.0);
+    const intake = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.42, 1.5), panel);
+    intake.position.set(0, 0.82, -2.75);
+    const intakeLip = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.12, 1.66), darkGrey);
+    intakeLip.position.set(0, 1.08, -2.75);
+    const wing = this.createFlatPlanform([[-4.95, -0.95], [-0.75, -2.35], [0.75, -2.35], [4.95, -0.95], [2.05, 1.25], [-2.05, 1.25]], 0.16, grey);
+    wing.position.y = 1.2;
+    const leftRail = this.createCylinderBetween(new THREE.Vector3(-5.05, 1.12, -1.25), new THREE.Vector3(-5.05, 1.12, -2.85), 0.095, white);
+    const rightRail = this.createCylinderBetween(new THREE.Vector3(5.05, 1.12, -1.25), new THREE.Vector3(5.05, 1.12, -2.85), 0.095, white);
+    const leftRailNose = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 12), white);
+    leftRailNose.rotation.x = -Math.PI / 2;
+    leftRailNose.position.set(-5.05, 1.12, -3.05);
+    const rightRailNose = leftRailNose.clone();
+    rightRailNose.position.x = 5.05;
+    const tailplane = this.createFlatPlanform([[-2.45, 3.35], [-0.42, 2.65], [0.42, 2.65], [2.45, 3.35], [1.55, 4.55], [-1.55, 4.55]], 0.12, grey);
+    tailplane.position.y = 1.36;
+    const verticalTail = this.createFlatPlanform([[-0.14, 2.8], [0.14, 2.8], [0.14, 5.0], [0, 5.85], [-0.14, 5.0]], 0.18, darkGrey);
+    verticalTail.rotation.z = Math.PI / 2;
+    verticalTail.rotation.y = Math.PI / 2;
+    verticalTail.position.set(0, 1.45, 3.6);
+    const tailFlash = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.08), red);
+    tailFlash.position.set(0, 3.25, 4.2);
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.52, 0.72, 28), exhaust);
+    nozzle.rotation.x = Math.PI / 2;
+    nozzle.position.set(0, 1.32, 5.42);
+    const flameHolder = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.045, 8, 24), exhaust);
+    flameHolder.position.set(0, 1.32, 5.8);
+    const gear = this.buildTricycleGear(1.45, 0.34, -3.4, 2.3, 0.26);
+    const navLeft = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), new THREE.MeshStandardMaterial({ color: 0xc72d33, emissive: 0xc72d33, emissiveIntensity: 0.7 }));
+    navLeft.position.set(-4.9, 1.22, -0.95);
+    const navRight = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), new THREE.MeshStandardMaterial({ color: 0x4ac481, emissive: 0x4ac481, emissiveIntensity: 0.7 }));
+    navRight.position.set(4.9, 1.22, -0.95);
+    this.aircraft.add(fuselage, spine, nose, radome, canopy, intake, intakeLip, wing, leftRail, rightRail, leftRailNose, rightRailNose, tailplane, verticalTail, tailFlash, nozzle, flameHolder, gear, navLeft, navRight);
+  }
+
+  private buildA320Aircraft(): void {
+    const white = new THREE.MeshStandardMaterial({ color: 0xf4f2e8, roughness: 0.38, metalness: 0.04 });
+    const blue = new THREE.MeshStandardMaterial({ color: 0x1d568d, roughness: 0.42, metalness: 0.08 });
+    const grey = new THREE.MeshStandardMaterial({ color: 0xb6bdc1, roughness: 0.44, metalness: 0.12 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x1c2528, roughness: 0.58, metalness: 0.2 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x143f55, roughness: 0.12, metalness: 0.16 });
+    const fuselage = new THREE.Mesh(new THREE.CapsuleGeometry(2.05, 33.2, 12, 36), white);
+    fuselage.rotation.x = Math.PI / 2;
+    fuselage.position.set(0, 3.4, 0);
+    const noseBand = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 1.2), blue);
+    noseBand.position.set(0, 3.48, -16.8);
+    const cheatlineLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 25), blue);
+    cheatlineLeft.position.set(-2.08, 3.85, -1.6);
+    const cheatlineRight = cheatlineLeft.clone();
+    cheatlineRight.position.x = 2.08;
+    const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.56, 0.18), glass);
+    cockpitGlass.position.set(0, 4.2, -17.4);
+    const wing = this.createFlatPlanform([[-17.1, -1.25], [-2.0, -3.25], [2.0, -3.25], [17.1, -1.25], [12.2, 4.8], [0, 2.15], [-12.2, 4.8]], 0.22, grey);
+    wing.position.y = 2.92;
+    const leftWinglet = new THREE.Mesh(new THREE.BoxGeometry(0.28, 2.05, 0.36), blue);
+    leftWinglet.position.set(-17.05, 3.95, -1.05);
+    leftWinglet.rotation.z = -0.22;
+    const rightWinglet = leftWinglet.clone();
+    rightWinglet.position.x = 17.05;
+    rightWinglet.rotation.z = 0.22;
+    const leftEngine = this.buildTurbofanNacelle(-7.2, 2.05, -1.65, grey, dark);
+    const rightEngine = this.buildTurbofanNacelle(7.2, 2.05, -1.65, grey, dark);
+    const tailplane = this.createFlatPlanform([[-6.2, 14.0], [-0.8, 13.0], [0.8, 13.0], [6.2, 14.0], [4.2, 17.1], [-4.2, 17.1]], 0.18, grey);
+    tailplane.position.y = 6.0;
+    const verticalTail = this.createFlatPlanform([[-0.2, 13.4], [0.2, 13.4], [0.22, 18.3], [0, 20.2], [-0.22, 18.3]], 0.25, blue);
+    verticalTail.rotation.z = Math.PI / 2;
+    verticalTail.rotation.y = Math.PI / 2;
+    verticalTail.position.set(0, 4.5, 15.2);
+    const gear = this.buildTricycleGear(3.3, 0.72, -12.8, 5.2, 0.52);
+    for (let index = 0; index < 17; index += 1) {
+      const z = -12.8 + index * 1.45;
+      const leftWindow = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.34), glass);
+      leftWindow.position.set(-2.09, 4.15, z);
+      const rightWindow = leftWindow.clone();
+      rightWindow.position.x = 2.09;
+      this.aircraft.add(leftWindow, rightWindow);
+    }
+    const navLeft = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), new THREE.MeshStandardMaterial({ color: 0xc72d33, emissive: 0xc72d33, emissiveIntensity: 0.7 }));
+    navLeft.position.set(-17.1, 3.25, -1.2);
+    const navRight = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), new THREE.MeshStandardMaterial({ color: 0x4ac481, emissive: 0x4ac481, emissiveIntensity: 0.7 }));
+    navRight.position.set(17.1, 3.25, -1.2);
+    this.aircraft.add(fuselage, noseBand, cheatlineLeft, cheatlineRight, cockpitGlass, wing, leftWinglet, rightWinglet, leftEngine, rightEngine, tailplane, verticalTail, gear, navLeft, navRight);
+  }
+
+  private createFlatPlanform(points: Array<[number, number]>, thickness: number, material: THREE.Material): THREE.Mesh {
+    const half = thickness / 2;
+    const vertices: number[] = [];
+    for (const [x, z] of points) {
+      vertices.push(x, half, z);
+    }
+    for (const [x, z] of points) {
+      vertices.push(x, -half, z);
+    }
+
+    const indices: number[] = [];
+    for (let index = 1; index < points.length - 1; index += 1) {
+      indices.push(0, index, index + 1);
+      indices.push(points.length, points.length + index + 1, points.length + index);
+    }
+    for (let index = 0; index < points.length; index += 1) {
+      const next = (index + 1) % points.length;
+      indices.push(index, next, points.length + next, index, points.length + next, points.length + index);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return new THREE.Mesh(geometry, material);
+  }
+
+  private buildTricycleGear(mainHalfWidth: number, wheelRadius: number, noseZ: number, mainZ: number, y: number): THREE.Group {
+    const gear = new THREE.Group();
+    const metal = new THREE.MeshStandardMaterial({ color: 0xaeb5b8, roughness: 0.38, metalness: 0.24 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x151817, roughness: 0.68 });
+    const wheelGeometry = new THREE.TorusGeometry(wheelRadius, wheelRadius * 0.28, 10, 20);
+    const axle = this.createCylinderBetween(new THREE.Vector3(-mainHalfWidth, y + wheelRadius * 0.28, mainZ), new THREE.Vector3(mainHalfWidth, y + wheelRadius * 0.28, mainZ), wheelRadius * 0.12, metal);
+    const leftWheel = new THREE.Mesh(wheelGeometry, black);
+    leftWheel.rotation.y = Math.PI / 2;
+    leftWheel.position.set(-mainHalfWidth, y, mainZ);
+    const rightWheel = leftWheel.clone();
+    rightWheel.position.x = mainHalfWidth;
+    const noseWheel = new THREE.Mesh(wheelGeometry, black);
+    noseWheel.scale.setScalar(0.78);
+    noseWheel.rotation.y = Math.PI / 2;
+    noseWheel.position.set(0, y, noseZ);
+    const noseStrut = this.createCylinderBetween(new THREE.Vector3(0, y, noseZ), new THREE.Vector3(0, y + wheelRadius * 2.2, noseZ + 0.12), wheelRadius * 0.1, metal);
+    gear.add(axle, leftWheel, rightWheel, noseWheel, noseStrut);
+    return gear;
+  }
+
+  private buildTurbofanNacelle(x: number, y: number, z: number, nacelleMaterial: THREE.Material, fanMaterial: THREE.Material): THREE.Group {
+    const nacelle = new THREE.Group();
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.94, 2.55, 28), nacelleMaterial);
+    pod.rotation.x = Math.PI / 2;
+    const inlet = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.08, 10, 28), fanMaterial);
+    inlet.position.z = -1.33;
+    const fan = new THREE.Group();
+    const fanHub = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), fanMaterial);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.72, 0.035), fanMaterial);
+    for (let index = 0; index < 8; index += 1) {
+      const fanBlade = blade.clone();
+      fanBlade.rotation.z = (Math.PI * 2 * index) / 8;
+      fan.add(fanBlade);
+    }
+    fan.add(fanHub);
+    fan.position.z = -1.36;
+    nacelle.add(pod, inlet, fan);
+    nacelle.position.set(x, y, z);
+    this.animatedRotors.push(fan);
+    return nacelle;
   }
 
   private updateAircraftAndCamera(deltaSeconds: number): void {
@@ -926,7 +1132,8 @@ export class FlightScene {
       longitudeDeg: telemetry.longitudeDeg,
       altitudeFt: telemetry.altitudeFt
     });
-    const altitudeMeters = Math.max(1.35, feetToMeters(telemetry.altitudeFt - telemetry.groundElevationFt) + 1.35);
+    const visual = this.aircraftProfile.visual;
+    const altitudeMeters = Math.max(visual.heightMeters * 0.1, feetToMeters(telemetry.altitudeFt - telemetry.groundElevationFt) + visual.heightMeters * 0.1);
     const aircraftPosition = new THREE.Vector3(local.east, altitudeMeters, -local.north);
     const forward = this.headingForward(telemetry.headingDeg);
     const pitchRad = degToRad(telemetry.pitchDeg);
@@ -941,20 +1148,23 @@ export class FlightScene {
     this.aircraft.rotation.y = -degToRad(telemetry.headingDeg);
     this.aircraft.rotation.x = degToRad(telemetry.pitchDeg);
     this.aircraft.rotation.z = degToRad(-telemetry.bankDeg);
-    this.propeller.rotation.z += deltaSeconds * Math.max(18, telemetry.rpm / 14);
+    const rotorRate = this.aircraftProfile.category === "piston" ? telemetry.enginePrimaryValue / 14 : telemetry.enginePrimaryValue * 2.2;
+    for (const rotor of this.animatedRotors) {
+      rotor.rotation.z += deltaSeconds * Math.max(18, rotorRate);
+    }
     this.aircraft.visible = this.viewMode === "chase";
 
     if (this.viewMode === "chase") {
       this.setCameraFov(54);
-      const chaseTarget = aircraftPosition.clone().add(forward.clone().multiplyScalar(-38)).add(new THREE.Vector3(0, telemetry.onGround ? 7.5 : 12, 0));
-      const lookAt = aircraftPosition.clone().add(forward.clone().multiplyScalar(14)).add(new THREE.Vector3(0, 2.6, 0));
+      const chaseTarget = aircraftPosition.clone().add(forward.clone().multiplyScalar(-visual.chaseDistanceMeters)).add(new THREE.Vector3(0, telemetry.onGround ? visual.chaseHeightMeters * 0.62 : visual.chaseHeightMeters, 0));
+      const lookAt = aircraftPosition.clone().add(forward.clone().multiplyScalar(visual.chaseLookAheadMeters)).add(new THREE.Vector3(0, visual.heightMeters * 0.45, 0));
       this.camera.up.set(0, 1, 0);
       this.camera.position.lerp(chaseTarget, modeJustChanged ? 1 : 0.16);
       this.camera.lookAt(lookAt);
       return;
     }
 
-    const cockpitBase = aircraftPosition.clone().add(forward.clone().multiplyScalar(this.viewMode === "pilot" ? 1.95 : 1.05)).add(new THREE.Vector3(0, this.viewMode === "pilot" ? 2.28 : 1.92, 0));
+    const cockpitBase = aircraftPosition.clone().add(forward.clone().multiplyScalar(this.viewMode === "pilot" ? visual.cockpitForwardMeters : visual.cockpitForwardMeters * 0.82)).add(new THREE.Vector3(0, this.viewMode === "pilot" ? visual.cockpitHeightMeters : visual.cockpitHeightMeters * 0.82, 0));
     const lookAt = cockpitBase.clone().add(flightDirection.clone().multiplyScalar(1200));
     const rolledUp = new THREE.Vector3(0, 1, 0).applyAxisAngle(flightDirection, degToRad(telemetry.bankDeg));
     this.setCameraFov(this.viewMode === "pilot" ? 72 : 60);

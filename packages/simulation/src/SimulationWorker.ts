@@ -1,4 +1,5 @@
 import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT, type AircraftControls, type EnvironmentState, type SimulationInboundMessage, type SimulationOutboundMessage } from "@stflightsim/shared";
+import { DEFAULT_AIRCRAFT_PROFILE, getAircraftProfile, type AircraftProfile } from "@stflightsim/aircraft";
 import { DEFAULT_SCENERY_REGION, getSceneryRegion, type SceneryRegion } from "@stflightsim/scenery";
 import { createInitialFlightState, stepSimpleFlightModel, toTelemetry, type SimpleFlightState } from "./simpleFlightModel";
 
@@ -7,7 +8,8 @@ const fixedDeltaSeconds = 1 / 60;
 let controls: AircraftControls = { ...DEFAULT_AIRCRAFT_CONTROLS };
 let environment: EnvironmentState = { ...STANDARD_ENVIRONMENT };
 let region: SceneryRegion = DEFAULT_SCENERY_REGION;
-let state: SimpleFlightState = createInitialFlightState(region);
+let aircraftProfile: AircraftProfile = DEFAULT_AIRCRAFT_PROFILE;
+let state: SimpleFlightState = createInitialFlightState(region, aircraftProfile);
 let paused = false;
 let started = false;
 let lastTelemetryPostMs = 0;
@@ -18,19 +20,27 @@ workerScope.addEventListener("message", (event: MessageEvent<SimulationInboundMe
   if (message.type === "start") {
     started = true;
     post({ type: "status", status: "running" });
-    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region) });
+    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region, aircraftProfile) });
   }
 
   if (message.type === "reset") {
-    state = createInitialFlightState(region);
-    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region) });
+    state = createInitialFlightState(region, aircraftProfile);
+    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region, aircraftProfile) });
   }
 
   if (message.type === "set-region") {
     region = getSceneryRegion(message.regionId) ?? region;
-    state = createInitialFlightState(region);
+    state = createInitialFlightState(region, aircraftProfile);
     post({ type: "status", status: paused ? "paused" : "running", message: region.name });
-    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region) });
+    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region, aircraftProfile) });
+  }
+
+  if (message.type === "set-aircraft") {
+    aircraftProfile = getAircraftProfile(message.aircraftId) ?? aircraftProfile;
+    controls = { ...DEFAULT_AIRCRAFT_CONTROLS };
+    state = createInitialFlightState(region, aircraftProfile);
+    post({ type: "status", status: paused ? "paused" : "running", message: aircraftProfile.displayName });
+    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region, aircraftProfile) });
   }
 
   if (message.type === "set-controls") {
@@ -52,12 +62,12 @@ setInterval(() => {
     return;
   }
 
-  state = stepSimpleFlightModel(state, controls, environment, fixedDeltaSeconds, region);
+  state = stepSimpleFlightModel(state, controls, environment, fixedDeltaSeconds, region, aircraftProfile);
   const now = performance.now();
 
   if (now - lastTelemetryPostMs > 33) {
     lastTelemetryPostMs = now;
-    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region) });
+    post({ type: "telemetry", telemetry: toTelemetry(state, controls, environment, region, aircraftProfile) });
   }
 }, fixedDeltaSeconds * 1000);
 
