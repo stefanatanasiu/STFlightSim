@@ -90,6 +90,18 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await page.waitForTimeout(300);
   await expectNonblankCanvas(canvas);
 
+  for (const aircraft of [
+    { id: "a330-300-dev", label: "A330" },
+    { id: "a380-800-dev", label: "A380" },
+    { id: "b747-400-dev", label: "B747" }
+  ]) {
+    await page.getByLabel("Aircraft").selectOption(aircraft.id);
+    await expect(page.getByLabel("Aircraft")).toHaveValue(aircraft.id);
+    await expect(page.getByText(aircraft.label).first()).toBeVisible();
+    await page.waitForTimeout(300);
+    await expectNonblankCanvas(canvas);
+  }
+
   await page.getByRole("button", { name: "High-resolution OpenStreetMap" }).click();
   await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "true");
   await page.waitForTimeout(250);

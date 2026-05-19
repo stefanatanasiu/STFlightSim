@@ -51,6 +51,17 @@ Online scenery uses OpenStreetMap contributor data through the public Overpass A
 
 Gamepads are polled through the browser Gamepad API. Left stick controls pitch/roll, right stick controls rudder/throttle bias, and triggers can be used for brakes/throttle depending on device mapping.
 
+## Current Aircraft
+
+- `C172`: Cessna 172S-inspired piston trainer.
+- `F-16C`: high-performance single-engine fighter profile.
+- `A320`: Airbus A320-200-style narrow-body airliner.
+- `A330`: Airbus A330-300-style twin-engine long-haul widebody.
+- `A380`: Airbus A380-800-style four-engine double-deck widebody.
+- `B747`: Boeing 747-400-style four-engine widebody with a forward upper deck.
+
+Aircraft are development approximations tuned for this simulator's current TypeScript flight model and procedural 3D renderer. Product and manufacturer names are used descriptively; this project is not affiliated with or endorsed by the aircraft manufacturers.
+
 ## Architecture Snapshot
 
 - `apps/web`: Vite React PWA shell and cockpit UI.

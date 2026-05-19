@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { A320_PROFILE, F16C_PROFILE } from "@stflightsim/aircraft";
+import { A320_PROFILE, A330_PROFILE, A380_PROFILE, B747_PROFILE, F16C_PROFILE } from "@stflightsim/aircraft";
 import { SCENERY_REGIONS } from "@stflightsim/scenery";
 import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT } from "@stflightsim/shared";
 import { createInitialFlightState, stepSimpleFlightModel } from "@stflightsim/simulation";
@@ -81,6 +81,29 @@ describe("development flight model", () => {
     expect(state.airspeedKts).toBeGreaterThan(150);
     expect(state.airspeedKts).toBeLessThan(300);
     expect(state.verticalSpeedFpm).toBeGreaterThan(900);
+    expect(stalledSteps).toBe(0);
+  });
+
+  it.each([
+    [A330_PROFILE, 145, 340, 550],
+    [A380_PROFILE, 150, 335, 420],
+    [B747_PROFILE, 150, 350, 480]
+  ])("models the %s as a heavy long-haul jet", (profile, minAirspeedKts, maxAirspeedKts, minClimbFpm) => {
+    let state = createInitialFlightState(undefined, profile);
+    const controls = { ...DEFAULT_AIRCRAFT_CONTROLS, throttle: 1, elevator: 0.72, flapsIndex: 2 };
+    let stalledSteps = 0;
+
+    for (let step = 0; step < 3000; step += 1) {
+      state = stepSimpleFlightModel(state, controls, STANDARD_ENVIRONMENT, 1 / 60, undefined, profile);
+      if (state.stalled) {
+        stalledSteps += 1;
+      }
+    }
+
+    expect(state.onGround).toBe(false);
+    expect(state.airspeedKts).toBeGreaterThan(minAirspeedKts);
+    expect(state.airspeedKts).toBeLessThan(maxAirspeedKts);
+    expect(state.verticalSpeedFpm).toBeGreaterThan(minClimbFpm);
     expect(stalledSteps).toBe(0);
   });
 

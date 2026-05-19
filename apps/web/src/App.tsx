@@ -369,8 +369,8 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="help-note">
-          <strong>A320 takeoff</strong>
-          <span>Use F once or twice for takeoff flaps, hold Shift for thrust, then rotate gently near 145 KIAS.</span>
+          <strong>Airliner takeoff</strong>
+          <span>Use F once or twice for takeoff flaps, hold Shift for thrust, then rotate gently near the aircraft's Vr.</span>
         </div>
       </section>
     </div>

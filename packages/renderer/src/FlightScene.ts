@@ -1023,6 +1023,12 @@ export class FlightScene {
       this.buildF16Aircraft();
     } else if (this.aircraftProfile.visual.model === "a320") {
       this.buildA320Aircraft();
+    } else if (this.aircraftProfile.visual.model === "a330") {
+      this.buildWidebodyAircraft({ kind: "a330", fuselageRadius: 2.85, fuselageLength: 58.2, wingHalfSpan: 30.15, wingRootZ: -4.8, wingTipForwardZ: -8.2, wingTipAftZ: 8.6, engineXs: [-13.8, 13.8], engineScale: 1.42, tailHeight: 15.8, stripeColor: 0x22629a });
+    } else if (this.aircraftProfile.visual.model === "a380") {
+      this.buildWidebodyAircraft({ kind: "a380", fuselageRadius: 3.65, fuselageLength: 65.2, wingHalfSpan: 39.9, wingRootZ: -6.2, wingTipForwardZ: -12.4, wingTipAftZ: 11.0, engineXs: [-27.4, -13.9, 13.9, 27.4], engineScale: 1.62, tailHeight: 22.5, stripeColor: 0x285f98 });
+    } else if (this.aircraftProfile.visual.model === "b747") {
+      this.buildWidebodyAircraft({ kind: "b747", fuselageRadius: 3.05, fuselageLength: 63.8, wingHalfSpan: 32.2, wingRootZ: -4.5, wingTipForwardZ: -10.2, wingTipAftZ: 9.6, engineXs: [-22.4, -11.2, 11.2, 22.4], engineScale: 1.48, tailHeight: 18.4, stripeColor: 0x315f9d });
     } else {
       this.buildC172Aircraft();
     }
@@ -1223,6 +1229,110 @@ export class FlightScene {
     this.aircraft.add(fuselage, noseBand, cheatlineLeft, cheatlineRight, cockpitGlass, wing, leftWinglet, rightWinglet, leftEngine, rightEngine, tailplane, verticalTail, gear, navLeft, navRight);
   }
 
+  private buildWidebodyAircraft(options: { kind: "a330" | "a380" | "b747"; fuselageRadius: number; fuselageLength: number; wingHalfSpan: number; wingRootZ: number; wingTipForwardZ: number; wingTipAftZ: number; engineXs: number[]; engineScale: number; tailHeight: number; stripeColor: number }): void {
+    const white = new THREE.MeshStandardMaterial({ color: 0xf4f2e8, roughness: 0.38, metalness: 0.04 });
+    const stripe = new THREE.MeshStandardMaterial({ color: options.stripeColor, roughness: 0.42, metalness: 0.08 });
+    const grey = new THREE.MeshStandardMaterial({ color: 0xb8bec2, roughness: 0.44, metalness: 0.12 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x1b2427, roughness: 0.58, metalness: 0.2 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x143f55, roughness: 0.12, metalness: 0.16 });
+    const rootChord = options.kind === "a380" ? 13.8 : 11.4;
+    const fuselageY = options.fuselageRadius + (options.kind === "a380" ? 2.35 : 2.05);
+    const noseZ = -options.fuselageLength / 2 - options.fuselageRadius * 0.58;
+    const tailZ = options.fuselageLength / 2 - options.fuselageRadius * 0.15;
+
+    const fuselage = new THREE.Mesh(new THREE.CapsuleGeometry(options.fuselageRadius, options.fuselageLength, 14, 42), white);
+    fuselage.rotation.x = Math.PI / 2;
+    fuselage.position.set(0, fuselageY, 0);
+
+    const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(options.fuselageRadius * 1.45, options.fuselageRadius * 0.24, 0.22), glass);
+    cockpitGlass.position.set(0, fuselageY + options.fuselageRadius * 0.38, noseZ + options.fuselageRadius * 0.28);
+
+    const cheatlineLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, options.fuselageLength * 0.68), stripe);
+    cheatlineLeft.position.set(-options.fuselageRadius - 0.04, fuselageY + options.fuselageRadius * 0.22, -options.fuselageLength * 0.06);
+    const cheatlineRight = cheatlineLeft.clone();
+    cheatlineRight.position.x = options.fuselageRadius + 0.04;
+
+    const wing = this.createFlatPlanform([
+      [-options.wingHalfSpan, options.wingTipForwardZ],
+      [-options.fuselageRadius * 0.9, options.wingRootZ - rootChord * 0.45],
+      [options.fuselageRadius * 0.9, options.wingRootZ - rootChord * 0.45],
+      [options.wingHalfSpan, options.wingTipForwardZ],
+      [options.wingHalfSpan * 0.82, options.wingTipAftZ],
+      [options.fuselageRadius * 1.15, options.wingRootZ + rootChord * 0.55],
+      [-options.fuselageRadius * 1.15, options.wingRootZ + rootChord * 0.55],
+      [-options.wingHalfSpan * 0.82, options.wingTipAftZ]
+    ], options.kind === "a380" ? 0.36 : 0.3, grey);
+    wing.position.y = fuselageY - options.fuselageRadius * 0.38;
+
+    const wingletHeight = options.kind === "a380" ? 2.8 : 2.35;
+    const leftWinglet = new THREE.Mesh(new THREE.BoxGeometry(0.38, wingletHeight, 0.52), stripe);
+    leftWinglet.position.set(-options.wingHalfSpan, wing.position.y + wingletHeight * 0.45, options.wingTipForwardZ + 0.45);
+    leftWinglet.rotation.z = -0.22;
+    const rightWinglet = leftWinglet.clone();
+    rightWinglet.position.x = options.wingHalfSpan;
+    rightWinglet.rotation.z = 0.22;
+
+    const engines = options.engineXs.map((x) => this.buildTurbofanNacelle(x, wing.position.y - options.engineScale * 0.45, options.wingRootZ - 1.6 - Math.abs(x) / options.wingHalfSpan * 2.4, grey, dark, options.engineScale));
+
+    const tailHalfSpan = options.kind === "a380" ? 14.2 : options.kind === "b747" ? 12.4 : 11.2;
+    const tailplane = this.createFlatPlanform([[-tailHalfSpan, tailZ - 2.2], [-options.fuselageRadius * 0.55, tailZ - 3.8], [options.fuselageRadius * 0.55, tailZ - 3.8], [tailHalfSpan, tailZ - 2.2], [tailHalfSpan * 0.72, tailZ + 3.2], [-tailHalfSpan * 0.72, tailZ + 3.2]], 0.22, grey);
+    tailplane.position.y = fuselageY + options.fuselageRadius * 0.82;
+
+    const verticalTail = this.createFlatPlanform([[-0.28, tailZ - 2.6], [0.28, tailZ - 2.6], [0.3, tailZ + 4.2], [0, tailZ + 7.1], [-0.3, tailZ + 4.2]], 0.34, stripe);
+    verticalTail.rotation.z = Math.PI / 2;
+    verticalTail.rotation.y = Math.PI / 2;
+    verticalTail.scale.y = options.tailHeight / 15;
+    verticalTail.position.set(0, fuselageY + options.fuselageRadius * 0.35, tailZ - 0.4);
+
+    const gear = this.buildHeavyJetGear(options.wingHalfSpan * 0.13, options.kind === "a380" ? options.wingHalfSpan * 0.24 : options.wingHalfSpan * 0.2, options.fuselageRadius * 0.28, noseZ + options.fuselageRadius * 1.6, options.wingRootZ + rootChord * 0.35, fuselageY - options.fuselageRadius - 0.5, options.kind === "a330" ? 2 : 4);
+
+    for (let index = 0; index < Math.round(options.fuselageLength / 2.2); index += 1) {
+      const z = -options.fuselageLength * 0.34 + index * 2.0;
+      const leftWindow = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.38), glass);
+      leftWindow.position.set(-options.fuselageRadius - 0.05, fuselageY + options.fuselageRadius * 0.48, z);
+      const rightWindow = leftWindow.clone();
+      rightWindow.position.x = options.fuselageRadius + 0.05;
+      this.aircraft.add(leftWindow, rightWindow);
+
+      if (options.kind === "a380" && index < Math.round(options.fuselageLength / 2.4)) {
+        const upperLeft = leftWindow.clone();
+        upperLeft.position.y += options.fuselageRadius * 0.5;
+        const upperRight = upperLeft.clone();
+        upperRight.position.x = options.fuselageRadius + 0.05;
+        this.aircraft.add(upperLeft, upperRight);
+      }
+    }
+
+    if (options.kind === "a380") {
+      const upperDeck = new THREE.Mesh(new THREE.CapsuleGeometry(options.fuselageRadius * 0.58, options.fuselageLength * 0.68, 12, 36), white);
+      upperDeck.rotation.x = Math.PI / 2;
+      upperDeck.scale.set(1.22, 0.58, 1);
+      upperDeck.position.set(0, fuselageY + options.fuselageRadius * 0.62, -options.fuselageLength * 0.04);
+      const rearBlend = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 14), white);
+      rearBlend.scale.set(options.fuselageRadius * 0.72, options.fuselageRadius * 0.34, options.fuselageRadius * 1.28);
+      rearBlend.position.set(0, fuselageY + options.fuselageRadius * 0.62, options.fuselageLength * 0.31);
+      const crownHighlight = new THREE.Mesh(new THREE.BoxGeometry(options.fuselageRadius * 1.12, 0.08, options.fuselageLength * 0.58), stripe);
+      crownHighlight.position.set(0, fuselageY + options.fuselageRadius * 0.93, -options.fuselageLength * 0.08);
+      this.aircraft.add(upperDeck, rearBlend, crownHighlight);
+    }
+
+    if (options.kind === "b747") {
+      const hump = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 14), white);
+      hump.scale.set(options.fuselageRadius * 0.92, options.fuselageRadius * 0.5, options.fuselageLength * 0.17);
+      hump.position.set(0, fuselageY + options.fuselageRadius * 0.72, -options.fuselageLength * 0.28);
+      const upperWindows = new THREE.Mesh(new THREE.BoxGeometry(options.fuselageRadius * 1.15, 0.16, options.fuselageLength * 0.16), glass);
+      upperWindows.position.set(0, fuselageY + options.fuselageRadius * 1.02, -options.fuselageLength * 0.3);
+      this.aircraft.add(hump, upperWindows);
+    }
+
+    const navLeft = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), new THREE.MeshStandardMaterial({ color: 0xc72d33, emissive: 0xc72d33, emissiveIntensity: 0.7 }));
+    navLeft.position.set(-options.wingHalfSpan, wing.position.y + 0.32, options.wingTipForwardZ);
+    const navRight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), new THREE.MeshStandardMaterial({ color: 0x4ac481, emissive: 0x4ac481, emissiveIntensity: 0.7 }));
+    navRight.position.set(options.wingHalfSpan, wing.position.y + 0.32, options.wingTipForwardZ);
+
+    this.aircraft.add(fuselage, cockpitGlass, cheatlineLeft, cheatlineRight, wing, leftWinglet, rightWinglet, ...engines, tailplane, verticalTail, gear, navLeft, navRight);
+  }
+
   private createFlatPlanform(points: Array<[number, number]>, thickness: number, material: THREE.Material): THREE.Mesh {
     const half = thickness / 2;
     const vertices: number[] = [];
@@ -1270,22 +1380,55 @@ export class FlightScene {
     return gear;
   }
 
-  private buildTurbofanNacelle(x: number, y: number, z: number, nacelleMaterial: THREE.Material, fanMaterial: THREE.Material): THREE.Group {
+  private buildHeavyJetGear(innerHalfWidth: number, outerHalfWidth: number, wheelRadius: number, noseZ: number, mainZ: number, y: number, bogieCount: 2 | 4): THREE.Group {
+    const gear = new THREE.Group();
+    const metal = new THREE.MeshStandardMaterial({ color: 0xaeb5b8, roughness: 0.38, metalness: 0.24 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x151817, roughness: 0.68 });
+    const wheelGeometry = new THREE.TorusGeometry(wheelRadius, wheelRadius * 0.28, 10, 20);
+    const bogieXs = bogieCount === 4 ? [-outerHalfWidth, -innerHalfWidth, innerHalfWidth, outerHalfWidth] : [-innerHalfWidth, innerHalfWidth];
+
+    const noseWheel = new THREE.Mesh(wheelGeometry, black);
+    noseWheel.scale.setScalar(0.78);
+    noseWheel.rotation.y = Math.PI / 2;
+    noseWheel.position.set(0, y, noseZ);
+    const noseTwin = noseWheel.clone();
+    noseTwin.position.x = wheelRadius * 0.72;
+    noseWheel.position.x = -wheelRadius * 0.72;
+    const noseStrut = this.createCylinderBetween(new THREE.Vector3(0, y, noseZ), new THREE.Vector3(0, y + wheelRadius * 2.4, noseZ + 0.18), wheelRadius * 0.1, metal);
+    gear.add(noseWheel, noseTwin, noseStrut);
+
+    for (const x of bogieXs) {
+      const strut = this.createCylinderBetween(new THREE.Vector3(x, y, mainZ), new THREE.Vector3(x * 0.84, y + wheelRadius * 2.35, mainZ - 0.18), wheelRadius * 0.12, metal);
+      gear.add(strut);
+      for (const side of [-1, 1]) {
+        for (const along of [-0.55, 0.55]) {
+          const wheel = new THREE.Mesh(wheelGeometry, black);
+          wheel.rotation.y = Math.PI / 2;
+          wheel.position.set(x + side * wheelRadius * 0.72, y, mainZ + along * wheelRadius * 1.35);
+          gear.add(wheel);
+        }
+      }
+    }
+
+    return gear;
+  }
+
+  private buildTurbofanNacelle(x: number, y: number, z: number, nacelleMaterial: THREE.Material, fanMaterial: THREE.Material, scale = 1): THREE.Group {
     const nacelle = new THREE.Group();
-    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.94, 2.55, 28), nacelleMaterial);
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.88 * scale, 0.94 * scale, 2.55 * scale, 28), nacelleMaterial);
     pod.rotation.x = Math.PI / 2;
-    const inlet = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.08, 10, 28), fanMaterial);
-    inlet.position.z = -1.33;
+    const inlet = new THREE.Mesh(new THREE.TorusGeometry(0.75 * scale, 0.08 * scale, 10, 28), fanMaterial);
+    inlet.position.z = -1.33 * scale;
     const fan = new THREE.Group();
-    const fanHub = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), fanMaterial);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.72, 0.035), fanMaterial);
+    const fanHub = new THREE.Mesh(new THREE.SphereGeometry(0.16 * scale, 12, 8), fanMaterial);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.72 * scale, 0.035 * scale), fanMaterial);
     for (let index = 0; index < 8; index += 1) {
       const fanBlade = blade.clone();
       fanBlade.rotation.z = (Math.PI * 2 * index) / 8;
       fan.add(fanBlade);
     }
     fan.add(fanHub);
-    fan.position.z = -1.36;
+    fan.position.z = -1.36 * scale;
     nacelle.add(pod, inlet, fan);
     nacelle.position.set(x, y, z);
     this.animatedRotors.push(fan);
