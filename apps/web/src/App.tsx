@@ -7,6 +7,7 @@ import { FlightScene, type SceneryLoadStatus } from "@stflightsim/renderer";
 import { DEFAULT_SCENERY_REGION, SCENERY_REGIONS, type OnlineSceneryDetail, type SceneryRegionId } from "@stflightsim/scenery";
 import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT, type AircraftTelemetry, type CameraViewMode, type SimulationStatus } from "@stflightsim/shared";
 import { SimulationClient } from "@stflightsim/simulation";
+import { CockpitOverlay } from "./CockpitOverlay";
 
 const VIEW_MODES: CameraViewMode[] = ["pilot", "cockpit", "chase"];
 const REAL_SCENERY_ENABLED = import.meta.env.VITE_ENABLE_REAL_SCENERY === "true";
@@ -292,14 +293,18 @@ export function App() {
       {flightOverlayVisible && viewMode === "cockpit" && <CockpitOverlay telemetry={telemetry} />}
       {helpOpen && <HelpOverlay onClose={closeHelp} />}
 
-      <section className="left-stack" aria-label="Primary instruments">
-        <InstrumentPanel telemetry={telemetry} />
-      </section>
+      {viewMode !== "cockpit" && (
+        <>
+          <section className="left-stack" aria-label="Primary instruments">
+            <InstrumentPanel telemetry={telemetry} />
+          </section>
 
-      <section className="right-stack" aria-label="Engine and systems">
-        <EnginePanel telemetry={telemetry} />
-        <SystemsPanel telemetry={telemetry} throttle={systems.throttle} mixture={systems.mixture} />
-      </section>
+          <section className="right-stack" aria-label="Engine and systems">
+            <EnginePanel telemetry={telemetry} />
+            <SystemsPanel telemetry={telemetry} throttle={systems.throttle} mixture={systems.mixture} />
+          </section>
+        </>
+      )}
 
       {settingsOpen && <SettingsPanel telemetry={telemetry} />}
 
@@ -393,33 +398,6 @@ function HudOverlay({ telemetry }: { telemetry: AircraftTelemetry | null }) {
       </div>
       <div className="hud-heading">{formatGaugeValue(telemetry?.headingDeg ?? 0)} deg</div>
       <div className="hud-flightpath" style={{ transform: `translate(-50%, calc(-50% + ${-(telemetry?.pitchDeg ?? 0) * 3}px)) rotate(${-(telemetry?.bankDeg ?? 0)}deg)` }} />
-    </div>
-  );
-}
-
-function CockpitOverlay({ telemetry }: { telemetry: AircraftTelemetry | null }) {
-  return (
-    <div className="cockpit-overlay" aria-label="Cockpit frame">
-      <div className="windshield-frame windshield-left" />
-      <div className="windshield-frame windshield-right" />
-      <div className="windshield-frame windshield-center" />
-      <div className="glare-shield" />
-      <div className="cockpit-panel">
-        <MiniDial label="ASI" value={formatGaugeValue(telemetry?.airspeedKts ?? 0)} />
-        <MiniDial label="ALT" value={formatGaugeValue(telemetry?.altitudeFt ?? 0)} />
-        <MiniDial label="VSI" value={formatGaugeValue(telemetry?.verticalSpeedFpm ?? 0)} />
-        <MiniDial label="HDG" value={formatGaugeValue(telemetry?.headingDeg ?? 0)} />
-        <MiniDial label="RPM" value={formatGaugeValue(telemetry?.rpm ?? 0)} />
-      </div>
-    </div>
-  );
-}
-
-function MiniDial({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mini-dial">
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

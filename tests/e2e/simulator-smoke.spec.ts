@@ -112,6 +112,19 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await page.getByRole("button", { name: "Cockpit view" }).click();
   await expect(page.getByRole("button", { name: "Cockpit view" })).toHaveClass(/active/);
   await expect(page.locator(".cockpit-overlay")).toBeVisible();
+  await expect(page.locator(".left-stack")).toHaveCount(0);
+  for (const cockpit of [
+    { id: "c172-sp-dev", key: "c172", label: "ENG" },
+    { id: "f16c-block50-dev", key: "f16", label: "DED" },
+    { id: "a320-200-dev", key: "a320", label: "ECAM" },
+    { id: "a330-300-dev", key: "a330", label: "A330" },
+    { id: "a380-800-dev", key: "a380", label: "A380" },
+    { id: "b747-400-dev", key: "b747", label: "EICAS" }
+  ]) {
+    await page.getByLabel("Aircraft").selectOption(cockpit.id);
+    await expect(page.locator(`[data-cockpit="${cockpit.key}"]`)).toBeVisible();
+    await expect(page.locator(".cockpit-overlay")).toContainText(cockpit.label);
+  }
   await page.getByRole("button", { name: "Flight overlay" }).click();
   await expect(page.locator(".cockpit-overlay")).toHaveCount(0);
   await page.getByRole("button", { name: "Flight overlay" }).click();

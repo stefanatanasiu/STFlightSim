@@ -1,6 +1,6 @@
 # STFlightSim
 
-STFlightSim is a web-first flight simulator prototype. The current implementation starts with a runnable browser vertical slice: selectable airport scenery, optional live OpenStreetMap vector overlays, keyboard/gamepad controls, three camera modes, cockpit/HUD overlays, and a simulation worker that advances a Cessna 172-inspired flight model off the UI thread.
+STFlightSim is a web-first flight simulator prototype. The current implementation starts with a runnable browser vertical slice: selectable airport scenery, optional live OpenStreetMap vector overlays, keyboard/gamepad controls, three camera modes, aircraft-specific cockpit/HUD overlays, and a simulation worker that advances a Cessna 172-inspired flight model off the UI thread.
 
 The long-term architecture is designed for JSBSim compiled to WebAssembly for realistic flight dynamics and an Electron wrapper for Windows, macOS, and Linux once the web app stabilizes.
 
@@ -44,7 +44,7 @@ Online scenery uses OpenStreetMap contributor data through the public Overpass A
 - `P`: pause/resume
 - `Backspace`: reset to runway
 - `1`: clean forward pilot/HUD view
-- `2`: cockpit frame and instrument-panel view
+- `2`: aircraft-specific cockpit frame and instrument-panel view
 - `3`: rear chase view with the full aircraft visible
 - `V`: cycle camera view
 - `H`: show/hide the HUD or cockpit frame overlay
