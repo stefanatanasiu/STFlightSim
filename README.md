@@ -24,7 +24,9 @@ VITE_ENABLE_REAL_SCENERY=true
 Use the map selector in the top toolbar to switch scenery. Changing region resets the aircraft at that airport's runway. When live scenery is enabled, use the stacked-layers button to toggle high-resolution OpenStreetMap detail for online-capable scenery.
 
 - `Heathrow`: city-airport scene with the 09L/27R and 09R/27L parallel runways, dense terminals, suburbs, motorways, reservoirs, and live OpenStreetMap roads/buildings/water when the Overpass API is reachable.
+- `London City`: Royal Docks airport scene with a short 09/27 runway, dock basins, Thames/Docklands cues, Canary Wharf-style towers, and live OpenStreetMap detail when online.
 - `Innsbruck`: mountain-valley airport with steep ridges, forested slopes, villages, cable cars, and live OSM vectors when online.
+- `Iasi`: northeastern Romania scene with a 14/32 runway, rolling terrain, surrounding farmland, city blocks southwest of the airport, and live OSM vectors when online.
 - `St Maarten`: coastal island airport with beach approach, marina, resorts, palms, turquoise water, and live OSM coastline/detail when online.
 - `Seattle`: offline procedural fallback training field.
 

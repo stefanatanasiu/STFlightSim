@@ -118,7 +118,9 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
 
 const scenarios = [
   { id: "egll-city", airport: "London Heathrow Airport", screenshot: "test-results/stflightsim-heathrow-e2e.png" },
+  { id: "eglc-docklands", airport: "London City Airport", screenshot: "test-results/stflightsim-london-city-e2e.png" },
   { id: "lowi-alpine", airport: "Innsbruck Airport", screenshot: "test-results/stflightsim-innsbruck-e2e.png" },
+  { id: "lria-iasi", airport: "Iasi International Airport", screenshot: "test-results/stflightsim-iasi-e2e.png" },
   { id: "tncm-coastal", airport: "Princess Juliana International Airport", screenshot: "test-results/stflightsim-coastal-e2e.png" },
   { id: "kbfioffline", airport: "Boeing Field / King County International", screenshot: "test-results/stflightsim-seattle-e2e.png" }
 ];

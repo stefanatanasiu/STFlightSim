@@ -199,7 +199,11 @@ export class FlightScene {
       this.worldRoot.add(ocean);
     }
 
-    if (this.region.kind === "city") {
+    if (this.region.id === "eglc-docklands") {
+      this.addLondonCityWaterOverlays();
+    }
+
+    if (this.region.kind === "city" && this.region.id !== "eglc-docklands") {
       this.addReservoirs(worldSize);
     }
   }
@@ -234,6 +238,18 @@ export class FlightScene {
       const water = coastline > 0 || x < -worldHalf * 0.56;
       const sand = !water && coastline > -260;
       return { heightMeters: water ? -1.1 : Math.max(0, noise * 0.22), water, urban: false, sand };
+    }
+
+    if (this.region.id === "eglc-docklands") {
+      const water = this.isLondonCityWater(x, z, worldHalf);
+      const urban = !water && Math.abs(x) < worldHalf * 0.94 && Math.abs(z) < worldHalf * 0.9;
+      return { heightMeters: water ? -1.1 : Math.max(0, noise * 0.08), water, urban, sand: false };
+    }
+
+    if (this.region.id === "lria-iasi") {
+      const urban = x < -worldHalf * 0.16 && z > worldHalf * 0.12;
+      const rolling = Math.sin((x - 600) * 0.0007) * 14 + Math.cos((z + 900) * 0.0008) * 18 + Math.max(0, z + worldHalf * 0.12) * 0.004;
+      return { heightMeters: Math.max(0, rolling * this.region.procedural.terrainRelief + noise * 0.22), water: false, urban, sand: false };
     }
 
     if (this.region.kind === "city") {
@@ -375,6 +391,19 @@ export class FlightScene {
   private buildRegionalDetail(): void {
     this.addProceduralRoads();
 
+    if (this.region.id === "eglc-docklands") {
+      this.addCityBlocks();
+      this.addCommuterRail();
+      this.addLondonCityDocklands();
+      return;
+    }
+
+    if (this.region.id === "lria-iasi") {
+      this.addIasiRegionalDetail();
+      this.addForests(150, 0.72);
+      return;
+    }
+
     if (this.region.kind === "city") {
       this.addCityBlocks();
       this.addCommuterRail();
@@ -444,6 +473,128 @@ export class FlightScene {
         tower.rotation.y = 0.12 * (index % 5);
         this.worldRoot.add(tower);
       }
+    }
+  }
+
+  private addLondonCityWaterOverlays(): void {
+    const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x315f72, roughness: 0.42, metalness: 0, transparent: true, opacity: 0.72, depthWrite: false });
+    const dockBasins = [
+      { x: -120, z: -420, width: 3600, depth: 310 },
+      { x: 180, z: 410, width: 3300, depth: 360 },
+      { x: -2300, z: 1220, width: 1400, depth: 280 }
+    ];
+
+    for (const basin of dockBasins) {
+      const water = new THREE.Mesh(new THREE.BoxGeometry(basin.width, 0.08, basin.depth), waterMaterial);
+      water.position.set(basin.x, 0.05, basin.z);
+      this.worldRoot.add(water);
+    }
+  }
+
+  private addLondonCityDocklands(): void {
+    const waterEdge = new THREE.MeshStandardMaterial({ color: 0x2c3331, roughness: 0.86 });
+    const terminalWall = new THREE.MeshStandardMaterial({ color: 0x8a9392, roughness: 0.66 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x2d6174, roughness: 0.22, metalness: 0.08 });
+    const towerMaterial = new THREE.MeshStandardMaterial({ color: 0x7f8f96, roughness: 0.42, metalness: 0.08 });
+    const domeMaterial = new THREE.MeshStandardMaterial({ color: 0xd6d9d2, roughness: 0.7 });
+
+    for (const z of [-610, 610]) {
+      const quay = new THREE.Mesh(new THREE.BoxGeometry(3650, 0.1, 34), waterEdge);
+      quay.position.set(0, 0.18, z);
+      this.worldRoot.add(quay);
+    }
+
+    const terminal = new THREE.Group();
+    const terminalBody = new THREE.Mesh(new THREE.BoxGeometry(460, 24, 90), terminalWall);
+    terminalBody.position.y = 12;
+    const terminalGlass = new THREE.Mesh(new THREE.BoxGeometry(430, 10, 6), glass);
+    terminalGlass.position.set(0, 14, 48);
+    terminal.add(terminalBody, terminalGlass);
+    terminal.position.set(-260, 0.22, -780);
+    this.worldRoot.add(terminal);
+
+    for (let index = 0; index < 15; index += 1) {
+      const height = 78 + (index % 5) * 26;
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(54 + (index % 3) * 9, height, 48 + (index % 4) * 8), towerMaterial);
+      tower.position.set(-4300 + (index % 5) * 210, height / 2, 1520 + Math.floor(index / 5) * 220);
+      tower.rotation.y = 0.09 * (index % 4);
+      this.worldRoot.add(tower);
+    }
+
+    const o2Dome = new THREE.Mesh(new THREE.SphereGeometry(260, 36, 14), domeMaterial);
+    o2Dome.scale.set(1, 0.24, 1);
+    o2Dome.position.set(-3100, 35, 2850);
+    this.worldRoot.add(o2Dome);
+
+    const mastMaterial = new THREE.MeshStandardMaterial({ color: 0xeff2e6, roughness: 0.55 });
+    for (let index = 0; index < 6; index += 1) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 90, 8), mastMaterial);
+      const angle = (index / 6) * Math.PI * 2;
+      mast.position.set(-3100 + Math.cos(angle) * 250, 78, 2850 + Math.sin(angle) * 250);
+      mast.rotation.z = Math.sin(angle) * 0.12;
+      this.worldRoot.add(mast);
+    }
+  }
+
+  private isLondonCityWater(x: number, z: number, worldHalf: number): boolean {
+    const royalAlbertDock = Math.abs(x) < 2500 && z < -210 && z > -620;
+    const kingGeorgeVDock = Math.abs(x) < 2300 && z > 210 && z < 640;
+    const victoriaDock = x < -worldHalf * 0.32 && x > -worldHalf * 0.82 && z > 980 && z < 1410;
+    const thames = z > worldHalf * 0.48 + Math.sin(x * 0.00095) * 280;
+    return royalAlbertDock || kingGeorgeVDock || victoriaDock || thames;
+  }
+
+  private addIasiRegionalDetail(): void {
+    this.addIasiFarmFields();
+    this.addIasiCityCluster();
+  }
+
+  private addIasiFarmFields(): void {
+    const fieldMaterials = [0x8f9a55, 0x6f8a4d, 0xa99b62, 0x7d9654].map((value) => new THREE.MeshStandardMaterial({ color: value, roughness: 0.96 }));
+    const world = this.region.worldSizeMeters;
+
+    for (let row = 0; row < 6; row += 1) {
+      for (let col = 0; col < 7; col += 1) {
+        const x = -world * 0.43 + col * 980;
+        const z = -world * 0.36 + row * 920;
+        if (this.getRunways().some((runway) => {
+          const runwayPosition = this.runwayLocal(x, z, runway);
+          return Math.abs(runwayPosition.lateral) < 760 && Math.abs(runwayPosition.along) < runway.lengthMeters * 0.84;
+        })) {
+          continue;
+        }
+
+        const field = new THREE.Mesh(new THREE.BoxGeometry(760, 0.07, 620), fieldMaterials[(row + col) % fieldMaterials.length]);
+        field.position.set(x, this.sampleTerrain(x, z).heightMeters + 0.05, z);
+        field.rotation.y = ((row + col) % 2 === 0 ? 0.04 : -0.08) + row * 0.015;
+        this.worldRoot.add(field);
+      }
+    }
+  }
+
+  private addIasiCityCluster(): void {
+    const wall = new THREE.MeshStandardMaterial({ color: 0x9a907d, roughness: 0.82 });
+    const roof = new THREE.MeshStandardMaterial({ color: 0x7f4738, roughness: 0.78 });
+    const road = new THREE.MeshStandardMaterial({ color: 0x3a3a36, roughness: 0.86 });
+
+    const airportRoad = new THREE.Mesh(new THREE.BoxGeometry(14, 0.1, 3300), road);
+    airportRoad.position.set(-1700, 0.2, 1850);
+    airportRoad.rotation.y = -0.52;
+    this.worldRoot.add(airportRoad);
+
+    for (let index = 0; index < 92; index += 1) {
+      const height = 8 + (index % 6) * 3;
+      const x = -4200 + (index % 13) * 145 + Math.sin(index) * 22;
+      const z = 1900 + Math.floor(index / 13) * 125;
+      const building = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(22 + (index % 4) * 8, height, 18 + (index % 3) * 7), wall);
+      body.position.y = height / 2;
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(26 + (index % 4) * 8, 2.2, 22 + (index % 3) * 7), roof);
+      cap.position.y = height + 1.1;
+      building.add(body, cap);
+      building.position.set(x, this.sampleTerrain(x, z).heightMeters, z);
+      building.rotation.y = 0.12 * (index % 5);
+      this.worldRoot.add(building);
     }
   }
 

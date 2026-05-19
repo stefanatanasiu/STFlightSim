@@ -9,6 +9,18 @@ describe("scenery region data", () => {
     const heathrow = SCENERY_REGIONS.find((region) => region.id === "egll-city");
     expect(heathrow?.runways?.map((runway) => runway.name)).toEqual(["09R / 27L", "09L / 27R"]);
   });
+
+  it("includes London City and Iasi runway presets", () => {
+    const londonCity = SCENERY_REGIONS.find((region) => region.id === "eglc-docklands");
+    const iasi = SCENERY_REGIONS.find((region) => region.id === "lria-iasi");
+
+    expect(londonCity?.airportName).toBe("London City Airport");
+    expect(londonCity?.runway.name).toBe("09 / 27");
+    expect(londonCity?.runway.lengthMeters).toBe(1508);
+    expect(iasi?.airportName).toBe("Iasi International Airport");
+    expect(iasi?.runway.name).toBe("14 / 32");
+    expect(iasi?.runway.lengthMeters).toBe(2400);
+  });
 });
 
 describe("development flight model", () => {

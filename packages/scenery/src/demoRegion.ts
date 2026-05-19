@@ -1,6 +1,6 @@
 import type { GeodeticPoint } from "@stflightsim/shared";
 
-export type SceneryRegionId = "egll-city" | "lowi-alpine" | "tncm-coastal" | "kbfioffline";
+export type SceneryRegionId = "egll-city" | "eglc-docklands" | "lowi-alpine" | "lria-iasi" | "tncm-coastal" | "kbfioffline";
 export type SceneryRegionKind = "city" | "mountain" | "coastal" | "training";
 
 export interface SceneryRunway {
@@ -113,6 +113,48 @@ export const SCENERY_REGIONS: SceneryRegion[] = [
     }
   },
   {
+    id: "eglc-docklands",
+    name: "London City Docklands",
+    shortName: "London City",
+    airportName: "London City Airport",
+    description: "Short urban runway in London's Royal Docks, framed by water basins, dense Docklands blocks, Canary Wharf towers, and live OpenStreetMap detail when online.",
+    kind: "city",
+    origin: {
+      latitudeDeg: 51.5053,
+      longitudeDeg: 0.0553,
+      altitudeFt: 19
+    },
+    runway: {
+      id: "eglc0927",
+      name: "09 / 27",
+      center: {
+        latitudeDeg: 51.5053,
+        longitudeDeg: 0.0553,
+        altitudeFt: 19
+      },
+      headingDeg: 270,
+      lengthMeters: 1508,
+      widthMeters: 30,
+      thresholdOffsetMeters: 690
+    },
+    worldSizeMeters: 10000,
+    online: {
+      provider: "openstreetmap-overpass",
+      enabled: true,
+      radiusMeters: 2200,
+      maxFeatures: 850,
+      attribution: "Scenery vectors from OpenStreetMap contributors via Overpass API."
+    },
+    procedural: {
+      urbanDensity: 0.98,
+      treeDensity: 0.24,
+      roadDensity: 0.95,
+      waterCoverage: 0.36,
+      terrainRelief: 0.06,
+      airportScale: 0.58
+    }
+  },
+  {
     id: "lowi-alpine",
     name: "Innsbruck Alpine Valley",
     shortName: "Innsbruck",
@@ -152,6 +194,48 @@ export const SCENERY_REGIONS: SceneryRegion[] = [
       waterCoverage: 0.08,
       terrainRelief: 1,
       airportScale: 0.72
+    }
+  },
+  {
+    id: "lria-iasi",
+    name: "Iasi Moldova Hills",
+    shortName: "Iasi",
+    airportName: "Iasi International Airport",
+    description: "Northeastern Romanian airport on rolling terrain, with the city of Iasi to the southwest, farm fields around the field, and live OpenStreetMap vectors when online.",
+    kind: "training",
+    origin: {
+      latitudeDeg: 47.1785,
+      longitudeDeg: 27.6206,
+      altitudeFt: 397
+    },
+    runway: {
+      id: "lria1432",
+      name: "14 / 32",
+      center: {
+        latitudeDeg: 47.1785,
+        longitudeDeg: 27.6206,
+        altitudeFt: 397
+      },
+      headingDeg: 143,
+      lengthMeters: 2400,
+      widthMeters: 45,
+      thresholdOffsetMeters: 1120
+    },
+    worldSizeMeters: 14000,
+    online: {
+      provider: "openstreetmap-overpass",
+      enabled: true,
+      radiusMeters: 2600,
+      maxFeatures: 650,
+      attribution: "Scenery vectors from OpenStreetMap contributors via Overpass API."
+    },
+    procedural: {
+      urbanDensity: 0.38,
+      treeDensity: 0.72,
+      roadDensity: 0.52,
+      waterCoverage: 0.03,
+      terrainRelief: 0.34,
+      airportScale: 0.82
     }
   },
   {
