@@ -37,6 +37,13 @@ interface OverpassProfile {
   radiusMeters: number;
   maxFeatures: number;
   timeoutSeconds: number;
+  queryMode: "standard" | "high" | "reduced";
+}
+
+class OverpassHttpError extends Error {
+  constructor(readonly status: number) {
+    super(getOverpassStatusMessage(status));
+  }
 }
 
 interface OverpassGeometryPoint {
@@ -56,7 +63,32 @@ interface OverpassResponse {
 }
 
 export async function loadOpenStreetMapScenery(region: SceneryRegion, options: OpenStreetMapSceneryOptions = {}): Promise<OnlineSceneryData> {
-  const profile = getOverpassProfile(region, options.detail ?? "standard");
+  const profiles = getOverpassProfiles(region, options.detail ?? "standard");
+  let retriedReducedQuery = false;
+
+  for (let index = 0; index < profiles.length; index += 1) {
+    const profile = profiles[index];
+
+    try {
+      return await requestOpenStreetMapScenery(region, profile, options);
+    } catch (error) {
+      if (options.signal?.aborted) {
+        throw error;
+      }
+
+      if (shouldRetryWithReducedQuery(error, profile, index, profiles)) {
+        retriedReducedQuery = true;
+        continue;
+      }
+
+      throw normalizeOverpassError(error, retriedReducedQuery || profile.queryMode === "reduced");
+    }
+  }
+
+  throw new Error("OpenStreetMap Overpass did not return scenery data");
+}
+
+async function requestOpenStreetMapScenery(region: SceneryRegion, profile: OverpassProfile, options: OpenStreetMapSceneryOptions): Promise<OnlineSceneryData> {
   const query = buildOverpassQuery(region, profile);
   const response = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
@@ -66,7 +98,7 @@ export async function loadOpenStreetMapScenery(region: SceneryRegion, options: O
   });
 
   if (!response.ok) {
-    throw new Error(`Overpass API returned ${response.status}`);
+    throw new OverpassHttpError(response.status);
   }
 
   const payload = (await response.json()) as OverpassResponse;
@@ -87,13 +119,20 @@ export async function loadOpenStreetMapScenery(region: SceneryRegion, options: O
   };
 }
 
+function getOverpassProfiles(region: SceneryRegion, detail: OnlineSceneryDetail): OverpassProfile[] {
+  const primary = getOverpassProfile(region, detail);
+  const reduced = getReducedOverpassProfile(region);
+  return primary.queryMode === reduced.queryMode && primary.radiusMeters <= reduced.radiusMeters ? [primary] : [primary, reduced];
+}
+
 function getOverpassProfile(region: SceneryRegion, detail: OnlineSceneryDetail): OverpassProfile {
   if (detail === "high") {
     return {
       detail,
       radiusMeters: Math.min(5200, Math.round(region.online.radiusMeters * 1.55)),
       maxFeatures: Math.min(2200, Math.round(region.online.maxFeatures * 2.35)),
-      timeoutSeconds: 24
+      timeoutSeconds: 24,
+      queryMode: "high"
     };
   }
 
@@ -101,7 +140,18 @@ function getOverpassProfile(region: SceneryRegion, detail: OnlineSceneryDetail):
     detail,
     radiusMeters: region.online.radiusMeters,
     maxFeatures: region.online.maxFeatures,
-    timeoutSeconds: 12
+    timeoutSeconds: 12,
+    queryMode: "standard"
+  };
+}
+
+function getReducedOverpassProfile(region: SceneryRegion): OverpassProfile {
+  return {
+    detail: "standard",
+    radiusMeters: Math.min(1500, Math.max(900, Math.round(region.online.radiusMeters * 0.45))),
+    maxFeatures: Math.min(260, Math.max(120, Math.round(region.online.maxFeatures * 0.3))),
+    timeoutSeconds: 8,
+    queryMode: "reduced"
   };
 }
 
@@ -115,13 +165,28 @@ function buildOverpassQuery(region: SceneryRegion, profile: OverpassProfile): st
   const north = region.origin.latitudeDeg + latitudeDelta;
   const east = region.origin.longitudeDeg + longitudeDelta;
   const bbox = `${south},${west},${north},${east}`;
-  const highDetailWays = profile.detail === "high" ? `
+  const highDetailWays = profile.queryMode === "high" ? `
   way["highway"~"pedestrian|footway|cycleway|path|track"](${bbox});
   way["railway"~"rail|light_rail|subway|tram"](${bbox});
   way["aeroway"~"runway|taxiway|apron|hangar|terminal"](${bbox});
   way["natural"~"wood|beach|wetland"](${bbox});
   way["leisure"~"park|marina|golf_course|pitch|garden|sports_centre"](${bbox});
   way["amenity"~"parking|school|university|hospital"](${bbox});` : "";
+
+  if (profile.queryMode === "reduced") {
+    return `
+[out:json][timeout:${profile.timeoutSeconds}];
+(
+  way["building"](${bbox});
+  way["highway"~"motorway|trunk|primary|secondary|tertiary|service"](${bbox});
+  way["aeroway"~"runway|taxiway|apron|hangar|terminal"](${bbox});
+  way["natural"="water"](${bbox});
+  way["waterway"](${bbox});
+  way["leisure"~"park|marina"](${bbox});
+);
+out geom;
+`;
+  }
 
   return `
 [out:json][timeout:${profile.timeoutSeconds}];
@@ -135,6 +200,37 @@ function buildOverpassQuery(region: SceneryRegion, profile: OverpassProfile): st
 );
 out geom;
 `;
+}
+
+function shouldRetryWithReducedQuery(error: unknown, profile: OverpassProfile, index: number, profiles: OverpassProfile[]): boolean {
+  return error instanceof OverpassHttpError && [502, 503, 504].includes(error.status) && profile.queryMode !== "reduced" && index < profiles.length - 1;
+}
+
+function normalizeOverpassError(error: unknown, retriedReducedQuery: boolean): Error {
+  if (error instanceof OverpassHttpError) {
+    const suffix = retriedReducedQuery ? " after a smaller retry" : "";
+    return new Error(`${getOverpassStatusMessage(error.status)}${suffix}`);
+  }
+
+  if (error instanceof TypeError) {
+    return new Error("OpenStreetMap Overpass request failed");
+  }
+
+  return error instanceof Error ? error : new Error("OpenStreetMap Overpass request failed");
+}
+
+function getOverpassStatusMessage(status: number): string {
+  switch (status) {
+    case 429:
+      return "OpenStreetMap Overpass rate limit reached";
+    case 502:
+    case 503:
+      return "OpenStreetMap Overpass is temporarily unavailable";
+    case 504:
+      return "OpenStreetMap Overpass timed out";
+    default:
+      return `OpenStreetMap Overpass returned ${status}`;
+  }
 }
 
 function toFeature(element: OverpassElement): OnlineSceneryFeature | null {

@@ -13,7 +13,7 @@ npm run dev
 
 Open the URL printed by Vite. The simulator starts directly in the clean forward pilot view.
 
-Live OpenStreetMap scenery is opt-in. To enable it locally, create `.env.local` with:
+Live OpenStreetMap scenery is opt-in. To enable it locally, create `.env.local` in the repository root with:
 
 ```powershell
 VITE_ENABLE_REAL_SCENERY=true
@@ -23,12 +23,12 @@ VITE_ENABLE_REAL_SCENERY=true
 
 Use the map selector in the top toolbar to switch scenery. Changing region resets the aircraft at that airport's runway. When live scenery is enabled, use the stacked-layers button to toggle high-resolution OpenStreetMap detail for online-capable scenery.
 
-- `Heathrow`: city-airport scene with dense terminals, suburbs, motorways, reservoirs, and live OpenStreetMap roads/buildings/water when the Overpass API is reachable.
+- `Heathrow`: city-airport scene with the 09L/27R and 09R/27L parallel runways, dense terminals, suburbs, motorways, reservoirs, and live OpenStreetMap roads/buildings/water when the Overpass API is reachable.
 - `Innsbruck`: mountain-valley airport with steep ridges, forested slopes, villages, cable cars, and live OSM vectors when online.
 - `St Maarten`: coastal island airport with beach approach, marina, resorts, palms, turquoise water, and live OSM coastline/detail when online.
 - `Seattle`: offline procedural fallback training field.
 
-Online scenery uses OpenStreetMap contributor data through the public Overpass API. Standard mode requests the core airport-area roads, buildings, water, and green spaces. High-resolution mode requests a larger radius, a higher feature budget, additional minor roads/paths/rail/aeroway features, and renders closed OSM footprints as actual flat or extruded vector shapes where possible. If the request is blocked, rate-limited, disabled, or offline, the renderer keeps the procedural scenery active. When OSM vectors are displayed, the app shows linked OpenStreetMap contributor attribution.
+Online scenery uses OpenStreetMap contributor data through the public Overpass API. Standard mode requests the core airport-area roads, buildings, water, and green spaces. High-resolution mode requests a larger radius, a higher feature budget, additional minor roads/paths/rail/aeroway features, and renders closed OSM footprints as actual flat or extruded vector shapes where possible. If Overpass times out, the app retries once with a smaller query before falling back. If the request is blocked, rate-limited, disabled, or offline, the renderer keeps the procedural scenery active. When OSM vectors are displayed, the app shows linked OpenStreetMap contributor attribution.
 
 ## Current Controls
 

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { DEFAULT_AIRCRAFT_PROFILE, type AircraftProfile } from "@stflightsim/aircraft";
-import { DEFAULT_SCENERY_REGION, loadOpenStreetMapScenery, type OnlineSceneryData, type OnlineSceneryDetail, type OnlineSceneryFeature, type SceneryRegion } from "@stflightsim/scenery";
+import { DEFAULT_SCENERY_REGION, loadOpenStreetMapScenery, type OnlineSceneryData, type OnlineSceneryDetail, type OnlineSceneryFeature, type SceneryRegion, type SceneryRunway } from "@stflightsim/scenery";
 import { degToRad, feetToMeters, localMetersBetween, type AircraftTelemetry, type CameraViewMode } from "@stflightsim/shared";
 
 export type SceneryLoadMode = "offline" | "loading" | "online" | "error";
@@ -206,9 +206,14 @@ export class FlightScene {
 
   private sampleTerrain(x: number, z: number): { heightMeters: number; water: boolean; urban: boolean; sand: boolean } {
     const worldHalf = this.region.worldSizeMeters / 2;
-    const runway = this.runwayLocal(x, z);
-    const runwayClear = Math.abs(runway.lateral) < this.region.runway.widthMeters * 3.2 && Math.abs(runway.along) < this.region.runway.lengthMeters * 0.72;
-    const airportClear = Math.abs(runway.lateral) < 520 && Math.abs(runway.along) < this.region.runway.lengthMeters * 0.75;
+    const runwayClear = this.getRunways().some((runway) => {
+      const runwayPosition = this.runwayLocal(x, z, runway);
+      return Math.abs(runwayPosition.lateral) < runway.widthMeters * 3.2 && Math.abs(runwayPosition.along) < runway.lengthMeters * 0.72;
+    });
+    const airportClear = this.getRunways().some((runway) => {
+      const runwayPosition = this.runwayLocal(x, z, runway);
+      return Math.abs(runwayPosition.lateral) < 520 && Math.abs(runwayPosition.along) < runway.lengthMeters * 0.75;
+    });
 
     if (runwayClear || airportClear) {
       return { heightMeters: 0, water: false, urban: false, sand: false };
@@ -217,6 +222,7 @@ export class FlightScene {
     const noise = Math.sin(x * 0.00068) * 23 + Math.cos(z * 0.00071) * 19 + Math.sin((x + z) * 0.0021) * 5;
 
     if (this.region.kind === "mountain") {
+      const runway = this.runwayLocal(x, z);
       const valley = Math.abs(runway.lateral) / worldHalf;
       const ridgeBias = Math.pow(Math.min(1.65, valley * 2.05), 1.72) * 650 * this.region.procedural.terrainRelief;
       const ridgeNoise = Math.sin(x * 0.0011) * 95 + Math.cos(z * 0.0009) * 125 + Math.sin((x - z) * 0.00055) * 155;
@@ -242,9 +248,14 @@ export class FlightScene {
   }
 
   private buildRunway(): void {
-    const runway = this.region.runway;
+    for (const runway of this.getRunways()) {
+      this.buildRunwaySurface(runway);
+    }
+  }
+
+  private buildRunwaySurface(runway: SceneryRunway): void {
     const runwayGroup = new THREE.Group();
-    const center = this.runwayCenterWorld();
+    const center = this.runwayCenterWorld(runway);
     const asphalt = new THREE.MeshStandardMaterial({ color: this.region.kind === "coastal" ? 0x343837 : 0x2a2f2f, roughness: 0.78 });
     const paint = new THREE.MeshStandardMaterial({ color: 0xf3f0df, roughness: 0.54 });
     const yellow = new THREE.MeshStandardMaterial({ color: 0xd5b640, roughness: 0.6 });
@@ -410,8 +421,10 @@ export class FlightScene {
     for (let index = 0; index < count; index += 1) {
       const x = -world * 0.44 + (index % 31) * (world * 0.028) + Math.sin(index * 11.1) * 38;
       const z = -world * 0.36 + Math.floor(index / 31) * (world * 0.038) + Math.cos(index * 7.4) * 52;
-      const runway = this.runwayLocal(x, z);
-      if (Math.abs(runway.lateral) < 780 && Math.abs(runway.along) < this.region.runway.lengthMeters * 0.82) {
+      if (this.getRunways().some((runway) => {
+        const runwayPosition = this.runwayLocal(x, z, runway);
+        return Math.abs(runwayPosition.lateral) < 780 && Math.abs(runwayPosition.along) < runway.lengthMeters * 0.82;
+      })) {
         continue;
       }
 
@@ -486,8 +499,10 @@ export class FlightScene {
     for (let index = 0; index < count; index += 1) {
       const x = -world * 0.46 + ((index * 173) % Math.round(world * 0.92));
       const z = -world * 0.46 + ((index * 317) % Math.round(world * 0.92));
-      const runway = this.runwayLocal(x, z);
-      if (Math.abs(runway.lateral) < 700 && Math.abs(runway.along) < this.region.runway.lengthMeters * 0.95) {
+      if (this.getRunways().some((runway) => {
+        const runwayPosition = this.runwayLocal(x, z, runway);
+        return Math.abs(runwayPosition.lateral) < 700 && Math.abs(runwayPosition.along) < runway.lengthMeters * 0.95;
+      })) {
         continue;
       }
 
@@ -1178,16 +1193,20 @@ export class FlightScene {
     this.camera.lookAt(lookAt);
   }
 
-  private runwayCenterWorld(): THREE.Vector3 {
-    const center = localMetersBetween(this.region.origin, this.region.runway.center);
+  private getRunways(): SceneryRunway[] {
+    return this.region.runways && this.region.runways.length > 0 ? this.region.runways : [this.region.runway];
+  }
+
+  private runwayCenterWorld(runway: SceneryRunway = this.region.runway): THREE.Vector3 {
+    const center = localMetersBetween(this.region.origin, runway.center);
     return new THREE.Vector3(center.east, 0, -center.north);
   }
 
-  private runwayLocal(x: number, z: number): { along: number; lateral: number } {
-    const center = this.runwayCenterWorld();
+  private runwayLocal(x: number, z: number, runway: SceneryRunway = this.region.runway): { along: number; lateral: number } {
+    const center = this.runwayCenterWorld(runway);
     const dx = x - center.x;
     const dz = z - center.z;
-    const headingRad = degToRad(this.region.runway.headingDeg);
+    const headingRad = degToRad(runway.headingDeg);
     return {
       along: dx * Math.sin(headingRad) + dz * -Math.cos(headingRad),
       lateral: dx * Math.cos(headingRad) + dz * Math.sin(headingRad)

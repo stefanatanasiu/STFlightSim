@@ -22,6 +22,7 @@ export interface SceneryRegion {
   kind: SceneryRegionKind;
   origin: GeodeticPoint;
   runway: SceneryRunway;
+  runways?: SceneryRunway[];
   worldSizeMeters: number;
   online: {
     provider: "openstreetmap-overpass";
@@ -46,7 +47,7 @@ export const SCENERY_REGIONS: SceneryRegion[] = [
     name: "London Heathrow City",
     shortName: "Heathrow",
     airportName: "London Heathrow Airport",
-    description: "Large city airport surrounded by dense suburbs, terminals, motorways, reservoirs, and live OpenStreetMap vector scenery when online.",
+    description: "Large city airport with Heathrow's parallel runways, dense terminals, suburbs, motorways, reservoirs, and live OpenStreetMap vector scenery when online.",
     kind: "city",
     origin: {
       latitudeDeg: 51.47002,
@@ -55,17 +56,45 @@ export const SCENERY_REGIONS: SceneryRegion[] = [
     },
     runway: {
       id: "egll27l09r",
-      name: "27L / 09R",
+      name: "09R / 27L",
       center: {
         latitudeDeg: 51.4648,
-        longitudeDeg: -0.4344,
+        longitudeDeg: -0.4591,
         altitudeFt: 83
       },
       headingDeg: 270,
-      lengthMeters: 3901,
+      lengthMeters: 3658,
       widthMeters: 50,
-      thresholdOffsetMeters: 1700
+      thresholdOffsetMeters: 1785
     },
+    runways: [
+      {
+        id: "egll09r27l",
+        name: "09R / 27L",
+        center: {
+          latitudeDeg: 51.4648,
+          longitudeDeg: -0.4591,
+          altitudeFt: 83
+        },
+        headingDeg: 270,
+        lengthMeters: 3658,
+        widthMeters: 50,
+        thresholdOffsetMeters: 1785
+      },
+      {
+        id: "egll09l27r",
+        name: "09L / 27R",
+        center: {
+          latitudeDeg: 51.4776,
+          longitudeDeg: -0.4591,
+          altitudeFt: 83
+        },
+        headingDeg: 270,
+        lengthMeters: 3902,
+        widthMeters: 50,
+        thresholdOffsetMeters: 1905
+      }
+    ],
     worldSizeMeters: 18000,
     online: {
       provider: "openstreetmap-overpass",

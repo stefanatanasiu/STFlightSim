@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { A320_PROFILE, F16C_PROFILE } from "@stflightsim/aircraft";
+import { SCENERY_REGIONS } from "@stflightsim/scenery";
 import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT } from "@stflightsim/shared";
 import { createInitialFlightState, stepSimpleFlightModel } from "@stflightsim/simulation";
+
+describe("scenery region data", () => {
+  it("models Heathrow with its two parallel runways", () => {
+    const heathrow = SCENERY_REGIONS.find((region) => region.id === "egll-city");
+    expect(heathrow?.runways?.map((runway) => runway.name)).toEqual(["09R / 27L", "09L / 27R"]);
+  });
+});
 
 describe("development flight model", () => {
   it("accelerates on the runway when throttle is advanced", () => {
