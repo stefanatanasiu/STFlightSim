@@ -9,6 +9,9 @@ import { DEFAULT_AIRCRAFT_CONTROLS, STANDARD_ENVIRONMENT, type AircraftTelemetry
 import { SimulationClient } from "@stflightsim/simulation";
 
 const VIEW_MODES: CameraViewMode[] = ["pilot", "cockpit", "chase"];
+const REAL_SCENERY_ENABLED = import.meta.env.VITE_ENABLE_REAL_SCENERY === "true";
+const OSM_ATTRIBUTION_URL = "https://www.openstreetmap.org/copyright";
+const OSM_ATTRIBUTION_LABEL = "Map data (c) OpenStreetMap contributors";
 
 const CONTROL_GROUPS = [
   {
@@ -97,7 +100,7 @@ export function App() {
       return;
     }
 
-    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, osmDetail: "standard", aircraftProfile: activeAircraft, onSceneryStatus: setSceneryStatus });
+    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, onlineScenery: REAL_SCENERY_ENABLED, osmDetail: "standard", aircraftProfile: activeAircraft, onSceneryStatus: setSceneryStatus });
     sceneRef.current = scene;
     scene.setViewMode("pilot");
     return () => {
@@ -217,7 +220,8 @@ export function App() {
 
   const viewLabel = viewMode === "pilot" ? "Pilot" : viewMode === "cockpit" ? "Cockpit" : "Chase";
   const osmDetailLabel = osmDetail === "high" ? "OSM high" : "OSM standard";
-  const scenerySourceLabel = sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready";
+  const sceneryAttribution = sceneryStatus.mode === "online" && sceneryStatus.attribution?.includes("OpenStreetMap") ? sceneryStatus.attribution : null;
+  const scenerySourceLabel = !REAL_SCENERY_ENABLED ? "Online scenery disabled" : sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready";
 
   return (
     <main className="simulator-shell">
@@ -303,8 +307,19 @@ export function App() {
         <div>{activeRegion.airportName}</div>
         <div className={`scenery-status scenery-${sceneryStatus.mode}`}>{sceneryStatus.message}</div>
         <div>JSBSim/WASM adapter staged</div>
-        <div>{scenerySourceLabel}</div>
+        {sceneryAttribution ? (
+          <a className="scenery-attribution" href={OSM_ATTRIBUTION_URL} target="_blank" rel="noreferrer" title={sceneryAttribution} aria-label="OpenStreetMap attribution">
+            {OSM_ATTRIBUTION_LABEL}
+          </a>
+        ) : (
+          <div className="scenery-source">{scenerySourceLabel}</div>
+        )}
       </footer>
+      {sceneryAttribution && (
+        <a className="mobile-scenery-attribution" href={OSM_ATTRIBUTION_URL} target="_blank" rel="noreferrer" title={sceneryAttribution} aria-label="OpenStreetMap attribution">
+          {OSM_ATTRIBUTION_LABEL}
+        </a>
+      )}
     </main>
   );
 }

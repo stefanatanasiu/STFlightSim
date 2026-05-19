@@ -6,7 +6,7 @@ Planned data sources:
 
 - **JSBSim** for flight dynamics. JSBSim is LGPL; keep it isolated, publish modifications, and include source availability before distribution.
 - **OurAirports** for airport/runway data. It is CC-BY 4.0 and requires attribution.
-- **OpenStreetMap-derived data** for buildings/roads where terms permit. OSM attribution and ODbL obligations must be honored.
+- **OpenStreetMap-derived data** for buildings/roads where terms permit. OSM attribution and ODbL obligations must be honored; the running app should show linked OpenStreetMap contributor attribution whenever OSM vectors are displayed.
 - **METAR/TAF providers** for weather. Provider terms determine whether a proxy, cache, or attribution UI is required.
 
 No third-party imagery or terrain tiles should be cached for offline use unless the provider terms explicitly allow it. Offline scenery packs should be generated from clearly licensed DEM/vector data or synthetic tooling.

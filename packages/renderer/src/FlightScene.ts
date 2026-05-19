@@ -671,7 +671,12 @@ export class FlightScene {
   private async loadOnlineLayer(): Promise<void> {
     this.clearOnlineLayer();
 
-    if (!this.onlineScenery || !this.region.online.enabled) {
+    if (!this.onlineScenery) {
+      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: online scenery disabled` });
+      return;
+    }
+
+    if (!this.region.online.enabled) {
       this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: procedural scenery`, attribution: this.region.online.attribution });
       return;
     }

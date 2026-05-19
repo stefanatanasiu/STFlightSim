@@ -743,8 +743,47 @@ select {
   font-size: 0.72rem;
 }
 
-.bottom-strip > div {
+.bottom-strip > div,
+.bottom-strip > a {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenery-source,
+.scenery-attribution {
+  flex: 0 1 260px;
+  text-align: right;
+}
+
+.scenery-attribution,
+.mobile-scenery-attribution {
+  color: #d7ddcf;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.scenery-attribution:hover,
+.scenery-attribution:focus-visible,
+.mobile-scenery-attribution:hover,
+.mobile-scenery-attribution:focus-visible {
+  color: #c9ffe8;
+}
+
+.mobile-scenery-attribution {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  max-width: calc(100vw - 28px);
+  display: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  backdrop-filter: blur(14px);
+  background: rgba(13, 20, 18, 0.76);
+  border: 1px solid rgba(244, 240, 223, 0.13);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+  font-size: 0.72rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -801,6 +840,10 @@ select {
 
   .bottom-strip {
     display: none;
+  }
+
+  .mobile-scenery-attribution {
+    display: block;
   }
 }
 
