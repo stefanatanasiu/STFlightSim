@@ -32,7 +32,7 @@ export class FlightScene {
   private readonly animatedRotors: THREE.Group[] = [];
   private readonly clock = new THREE.Clock();
   private readonly onSceneryStatus?: (status: SceneryLoadStatus) => void;
-  private readonly onlineScenery: boolean;
+  private onlineScenery: boolean;
   private osmDetail: OnlineSceneryDetail;
   private onlineSceneryGroup: THREE.Group | null = null;
   private sceneryAbortController: AbortController | null = null;
@@ -87,10 +87,15 @@ export class FlightScene {
   }
 
   setOsmDetail(detail: OnlineSceneryDetail): void {
-    if (this.osmDetail === detail) {
+    this.setOnlineScenery(this.onlineScenery, detail);
+  }
+
+  setOnlineScenery(enabled: boolean, detail: OnlineSceneryDetail = this.osmDetail): void {
+    if (this.onlineScenery === enabled && this.osmDetail === detail) {
       return;
     }
 
+    this.onlineScenery = enabled;
     this.osmDetail = detail;
     this.loadOnlineLayer();
   }
@@ -838,12 +843,12 @@ export class FlightScene {
     this.clearOnlineLayer();
 
     if (!this.onlineScenery) {
-      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: online scenery disabled` });
+      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: local procedural scenery` });
       return;
     }
 
     if (!this.region.online.enabled) {
-      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: procedural scenery`, attribution: this.region.online.attribution });
+      this.reportScenery({ regionId: this.region.id, mode: "offline", detail: this.osmDetail, message: `${this.region.name}: local procedural scenery`, attribution: this.region.online.attribution });
       return;
     }
 
@@ -868,7 +873,7 @@ export class FlightScene {
       }
 
       const message = error instanceof Error ? error.message : "Unable to load online scenery";
-      this.reportScenery({ regionId: region.id, mode: "error", detail, message: `Using procedural fallback: ${message}`, attribution: region.online.attribution });
+      this.reportScenery({ regionId: region.id, mode: "error", detail, message: `Using local procedural fallback: ${message}`, attribution: region.online.attribution });
     }
   }
 

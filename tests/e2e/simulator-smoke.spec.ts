@@ -73,7 +73,8 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
   await page.waitForTimeout(1800);
   await expect(page.getByLabel("Scenery region")).toHaveValue("egll-city");
   await expect(page.getByLabel("Aircraft")).toHaveValue("c172-sp-dev");
-  await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "false");
+  const scenerySourceSelect = page.getByLabel("Scenery source");
+  await expect(scenerySourceSelect).toHaveValue("standard");
   await expectNonblankCanvas(canvas);
 
   await page.getByLabel("Aircraft").selectOption("f16c-block50-dev");
@@ -102,8 +103,8 @@ test("loads the simulator and renders a nonblank WebGL scene", async ({ page }) 
     await expectNonblankCanvas(canvas);
   }
 
-  await page.getByRole("button", { name: "High-resolution OpenStreetMap" }).click();
-  await expect(page.getByRole("button", { name: "High-resolution OpenStreetMap" })).toHaveAttribute("aria-pressed", "true");
+  await scenerySourceSelect.selectOption("high");
+  await expect(scenerySourceSelect).toHaveValue("high");
   await page.waitForTimeout(250);
   await expectNonblankCanvas(canvas);
 

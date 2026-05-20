@@ -10,9 +10,10 @@ import { SimulationClient } from "@stflightsim/simulation";
 import { CockpitOverlay } from "./CockpitOverlay";
 
 const VIEW_MODES: CameraViewMode[] = ["pilot", "cockpit", "chase"];
-const REAL_SCENERY_ENABLED = import.meta.env.VITE_ENABLE_REAL_SCENERY === "true";
 const OSM_ATTRIBUTION_URL = "https://www.openstreetmap.org/copyright";
 const OSM_ATTRIBUTION_LABEL = "Map data (c) OpenStreetMap contributors";
+
+type ScenerySourceMode = "local" | OnlineSceneryDetail;
 
 const CONTROL_GROUPS = [
   {
@@ -68,7 +69,7 @@ export function App() {
   const [flightOverlayVisible, setFlightOverlayVisible] = useState(true);
   const [aircraftId, setAircraftId] = useState<AircraftId>(DEFAULT_AIRCRAFT_PROFILE_ID);
   const [regionId, setRegionId] = useState<SceneryRegionId>(DEFAULT_SCENERY_REGION.id);
-  const [osmDetail, setOsmDetail] = useState<OnlineSceneryDetail>("standard");
+  const [scenerySource, setScenerySource] = useState<ScenerySourceMode>("standard");
   const [sceneryStatus, setSceneryStatus] = useState<SceneryLoadStatus>({ regionId: DEFAULT_SCENERY_REGION.id, mode: "loading", detail: "standard", message: "Preparing scenery" });
   const activeAircraft = useMemo(() => getAircraftProfile(aircraftId) ?? AIRCRAFT_PROFILES[0], [aircraftId]);
   const activeRegion = useMemo(() => SCENERY_REGIONS.find((region) => region.id === regionId) ?? DEFAULT_SCENERY_REGION, [regionId]);
@@ -101,7 +102,7 @@ export function App() {
       return;
     }
 
-    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, onlineScenery: REAL_SCENERY_ENABLED, osmDetail: "standard", aircraftProfile: activeAircraft, onSceneryStatus: setSceneryStatus });
+    const scene = new FlightScene(canvasRef.current, { region: DEFAULT_SCENERY_REGION, osmDetail: "standard", aircraftProfile: activeAircraft, onSceneryStatus: setSceneryStatus });
     sceneRef.current = scene;
     scene.setViewMode("pilot");
     return () => {
@@ -121,8 +122,10 @@ export function App() {
   }, [viewMode]);
 
   useEffect(() => {
-    sceneRef.current?.setOsmDetail(osmDetail);
-  }, [osmDetail]);
+    const onlineScenery = activeRegion.online.enabled && scenerySource !== "local";
+    const osmDetail: OnlineSceneryDetail = scenerySource === "high" ? "high" : "standard";
+    sceneRef.current?.setOnlineScenery(onlineScenery, osmDetail);
+  }, [activeRegion.online.enabled, scenerySource]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -220,9 +223,16 @@ export function App() {
   };
 
   const viewLabel = viewMode === "pilot" ? "Pilot" : viewMode === "cockpit" ? "Cockpit" : "Chase";
-  const osmDetailLabel = osmDetail === "high" ? "OSM high" : "OSM standard";
+  const effectiveScenerySource: ScenerySourceMode = activeRegion.online.enabled ? scenerySource : "local";
+  const sceneryModeLabel = !activeRegion.online.enabled ? "Local only" : effectiveScenerySource === "local" ? "Local scenery" : effectiveScenerySource === "high" ? "OSM high" : "OSM standard";
   const sceneryAttribution = sceneryStatus.mode === "online" && sceneryStatus.attribution?.includes("OpenStreetMap") ? sceneryStatus.attribution : null;
-  const scenerySourceLabel = !REAL_SCENERY_ENABLED ? "Online scenery disabled" : sceneryStatus.mode === "online" ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors` : "Procedural fallback ready";
+  const scenerySourceLabel = sceneryStatus.mode === "online"
+    ? `${sceneryStatus.detail === "high" ? "High-res" : "Standard"} OSM vectors`
+    : effectiveScenerySource === "local"
+      ? "Local procedural scenery"
+      : sceneryStatus.mode === "loading"
+        ? `${effectiveScenerySource === "high" ? "High-res" : "Standard"} OSM selected`
+        : "Local fallback active";
 
   return (
     <main className="simulator-shell">
@@ -239,7 +249,7 @@ export function App() {
           <span>{activeAircraft.shortName}</span>
           <span>{activeRegion.shortName}</span>
           <span>Three.js</span>
-          <span>{osmDetailLabel}</span>
+          <span>{sceneryModeLabel}</span>
           <span>{telemetry?.onGround ? "Ground" : "Airborne"}</span>
         </div>
         <div className="toolbar" aria-label="Simulator toolbar">
@@ -263,9 +273,14 @@ export function App() {
               ))}
             </select>
           </label>
-          <button type="button" className={`icon-button detail-button ${osmDetail === "high" ? "active" : ""}`} onClick={() => setOsmDetail((detail) => detail === "high" ? "standard" : "high")} title="High-resolution OpenStreetMap" aria-label="High-resolution OpenStreetMap" aria-pressed={osmDetail === "high"}>
+          <label className="scenario-picker scenery-source-picker" title="Scenery source">
             <Layers size={17} />
-          </button>
+            <select aria-label="Scenery source" value={effectiveScenerySource} onChange={(event) => setScenerySource(event.target.value as ScenerySourceMode)}>
+              <option value="local">Local</option>
+              <option value="standard" disabled={!activeRegion.online.enabled}>OSM standard</option>
+              <option value="high" disabled={!activeRegion.online.enabled}>OSM high</option>
+            </select>
+          </label>
           <button type="button" className={`icon-button detail-button ${flightOverlayVisible ? "active" : ""}`} onClick={() => setFlightOverlayVisible((visible) => !visible)} title="Flight overlay" aria-label="Flight overlay" aria-pressed={flightOverlayVisible}>
             {flightOverlayVisible ? <Eye size={17} /> : <EyeOff size={17} />}
           </button>
